@@ -1,0 +1,241 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Anime {
+  id                    String    @id @default(cuid())
+  anilistId             Int       @unique @map("anilist_id")
+  malId                 Int?      @map("mal_id")
+  titleEnglish          String    @map("title_english")
+  titleRomaji           String    @map("title_romaji")
+  titleNative           String?   @map("title_native")
+  alternativeTitles     String?   @default("[]") @map("alternative_titles") // JSON array of alt titles
+  description           String    @default("")
+  coverImage            String    @map("cover_image")
+  coverImageExtraLarge  String?   @map("cover_image_extra_large")
+  bannerImage           String?   @map("banner_image")
+  genres                String    @default("[]") // JSON string of genres array
+  releaseYear           Int?      @map("release_year")
+  season                String?
+  format                String?   // TV, MOVIE, OVA, ONA, SPECIAL
+  status                String?   // RELEASING, FINISHED, NOT_YET_RELEASED
+  totalEpisodes         Int?      @map("total_episodes")
+  duration              Int?      // In minutes
+  countryOfOrigin       String?   @default("JP") @map("country_of_origin")
+  averageScore          Float?    @map("average_score")
+  anilistScore          Float?    @map("anilist_score")
+  malScore              Float?    @map("mal_score")
+  popularity            Int?
+  favourites            Int?      @default(0)
+  studios               String?   @default("[]") // JSON string
+  isTrending            Boolean   @default(false) @map("is_trending")
+  isPopular             Boolean   @default(false) @map("is_popular")
+  isTopRated            Boolean   @default(false) @map("is_top_rated")
+  isHindiDubbed         Boolean   @default(false) @map("is_hindi_dubbed")
+  isEnglishDubbed       Boolean   @default(false) @map("is_english_dubbed")
+  firstSeenAt           DateTime  @default(now()) @map("first_seen_at")
+  lastSyncedAt          DateTime  @default(now()) @map("last_synced_at")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  episodes              Episode[]
+  sourceMetadata        AnimeSourceMetadata[]
+  airingSchedules       AiringSchedule[]
+  characters            AnimeCharacter[]
+  providerMappings      ProviderAnimeMapping[]
+  watchlistItems        Watchlist[]
+  watchHistory          WatchHistory[]
+
+  @@index([malId])
+  @@index([isTrending])
+  @@index([isPopular])
+  @@index([isTopRated])
+  @@index([isHindiDubbed])
+  @@index([titleEnglish])
+  @@index([titleRomaji])
+  @@map("anime")
+}
+
+model AnimeSourceMetadata {
+  id              String   @id @default(cuid())
+  animeId         String   @map("anime_id")
+  sourceName      String   @map("source_name") // "ANILIST", "MAL", "JIKAN"
+  sourceRecordId  String   @map("source_record_id")
+  metadata        String   @default("{}") // Stored raw JSON
+  fetchedAt       DateTime @default(now()) @map("fetched_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  anime           Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([animeId, sourceName])
+  @@map("anime_source_metadata")
+}
+
+model Episode {
+  id              String          @id @default(cuid())
+  animeId         String          @map("anime_id")
+  episodeNumber   Int             @map("episode_number")
+  episodeTitle    String?         @map("episode_title")
+  japaneseTitle   String?         @map("japanese_title")
+  thumbnail       String?
+  thumbnailUrl    String?         @map("thumbnail_url")
+  releaseDate     String?         @map("release_date")
+  airedAt         DateTime?       @map("aired_at")
+  filler          Boolean         @default(false)
+  recap           Boolean         @default(false)
+  metadataSource  String          @default("ANILIST") @map("metadata_source") // "ANILIST", "JIKAN", "ANIKOTO"
+  metadataStatus  String          @default("AVAILABLE") @map("metadata_status")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  anime           Anime           @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  episodeStreams  EpisodeStream[]
+  watchHistory    WatchHistory[]
+
+  @@unique([animeId, episodeNumber])
+  @@map("episodes")
+}
+
+model AiringSchedule {
+  id              String   @id @default(cuid())
+  animeId         String   @map("anime_id")
+  episodeNumber   Int      @map("episode_number")
+  airingAt        DateTime @map("airing_at")
+  timeUntilAiring Int?     @map("time_until_airing")
+  source          String   @default("ANILIST")
+  lastCheckedAt   DateTime @default(now()) @map("last_checked_at")
+
+  anime           Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([animeId, episodeNumber])
+  @@map("airing_schedules")
+}
+
+model AnimeCharacter {
+  id                 String   @id @default(cuid())
+  animeId            String   @map("anime_id")
+  characterId        String?  @map("character_id")
+  name               String
+  role               String   @default("Main") // "Main", "Supporting"
+  imageUrl           String?  @map("image_url")
+  voiceActorName     String?  @map("voice_actor_name")
+  voiceActorLanguage String?  @default("Japanese") @map("voice_actor_language")
+  voiceActorImage    String?  @map("voice_actor_image")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  anime              Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@map("anime_characters")
+}
+
+model StreamingProvider {
+  id               String          @id @default(cuid())
+  providerName     String          @unique @map("provider_name")
+  providerBaseUrl  String          @map("provider_base_url")
+  enabled          Boolean         @default(true)
+  createdAt        DateTime        @default(now()) @map("created_at")
+
+  animeMappings    ProviderAnimeMapping[]
+  episodeStreams   EpisodeStream[]
+
+  @@map("streaming_providers")
+}
+
+model ProviderAnimeMapping {
+  id               String            @id @default(cuid())
+  animeId          String            @map("anime_id")
+  providerId       String            @map("provider_id")
+  providerAnimeId  String            @map("provider_anime_id")
+  mappingStatus    String            @default("VERIFIED") @map("mapping_status")
+  lastCheckedAt    DateTime          @default(now()) @map("last_checked_at")
+
+  anime            Anime             @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  provider         StreamingProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([animeId, providerId])
+  @@map("provider_anime_mappings")
+}
+
+model EpisodeStream {
+  id                 String            @id @default(cuid())
+  episodeId          String            @map("episode_id")
+  providerId         String            @map("provider_id")
+  providerEpisodeId  String?           @map("provider_episode_id")
+  language           String            @default("sub") // "sub" or "dub"
+  embedUrl           String            @map("embed_url")
+  availabilityStatus String            @default("AVAILABLE") @map("availability_status")
+  lastCheckedAt      DateTime          @default(now()) @map("last_checked_at")
+
+  episode            Episode           @relation(fields: [episodeId], references: [id], onDelete: Cascade)
+  provider           StreamingProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+
+  @@unique([episodeId, providerId, language])
+  @@map("episode_streams")
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String
+  email         String         @unique
+  passwordHash  String         @map("password_hash")
+  role          String         @default("USER") // "USER" or "ADMIN"
+  avatar        String?
+  createdAt     DateTime       @default(now()) @map("created_at")
+
+  watchlist     Watchlist[]
+  watchHistory  WatchHistory[]
+
+  @@map("users")
+}
+
+model Watchlist {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  animeId   String   @map("anime_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime     Anime    @relation(fields: [animeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, animeId])
+  @@map("watchlist")
+}
+
+model WatchHistory {
+  id              String    @id @default(cuid())
+  userId          String    @map("user_id")
+  animeId         String    @map("anime_id")
+  episodeId       String?   @map("episode_id")
+  episodeNumber   Int?      @map("episode_number")
+  progressSeconds Int       @default(0) @map("progress_seconds")
+  durationSeconds Int       @default(0) @map("duration_seconds")
+  completed       Boolean   @default(false)
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  anime           Anime     @relation(fields: [animeId], references: [id], onDelete: Cascade)
+  episode         Episode?  @relation(fields: [episodeId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, animeId, episodeId])
+  @@map("watch_history")
+}
+
+model SyncLog {
+  id             String    @id @default(cuid())
+  syncType       String    @map("sync_type") // ANILIST_METADATA, ANIKOTO_EPISODES, JIKAN_ENRICHMENT, SCHEDULE_SYNC
+  status         String    // SUCCESS, RUNNING, FAILED
+  itemsProcessed Int       @default(0) @map("items_processed")
+  itemsAdded     Int       @default(0) @map("items_added")
+  itemsUpdated   Int       @default(0) @map("items_updated")
+  errorMessage   String?   @map("error_message")
+  startedAt      DateTime  @default(now()) @map("started_at")
+  completedAt    DateTime? @map("completed_at")
+
+  @@map("sync_logs")
+}

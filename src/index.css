@@ -1,0 +1,109 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --bg-primary: #08080A;
+    --bg-secondary: #0F0F13;
+    --bg-surface: #15151C;
+    --bg-surface-elevated: #1C1C26;
+    --bg-surface-hover: #242432;
+    
+    --brand-primary: #E50914;
+    --brand-crimson: #F01428;
+    --brand-ember: #FF2B44;
+    --brand-glow: rgba(240, 20, 40, 0.35);
+
+    --text-primary: #F4F4F7;
+    --text-secondary: #9E9EB2;
+    --text-muted: #646478;
+
+    --border-subtle: rgba(255, 255, 255, 0.07);
+    --border-card: rgba(255, 255, 255, 0.1);
+    --border-accent: rgba(240, 20, 40, 0.3);
+
+    --font-heading: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-body: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'Space Grotesk', monospace;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.02em;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #08080A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #23232F;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #F01428;
+}
+
+/* Custom utility & component classes */
+.font-heading {
+  font-family: var(--font-heading);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+.font-display {
+  font-family: var(--font-mono);
+}
+
+.bg-hero-gradient {
+  background: linear-gradient(180deg, rgba(8, 8, 10, 0.2) 0%, rgba(8, 8, 10, 0.7) 60%, #08080A 100%),
+              linear-gradient(90deg, #08080A 0%, rgba(8, 8, 10, 0.8) 40%, rgba(8, 8, 10, 0.1) 100%);
+}
+
+.bg-card-gradient {
+  background: linear-gradient(180deg, rgba(21, 21, 28, 0.7) 0%, rgba(15, 15, 19, 0.95) 100%);
+}
+
+.border-subtle {
+  border-color: var(--border-subtle);
+}
+
+.glow-red {
+  box-shadow: 0 0 25px rgba(240, 20, 40, 0.35);
+}
+
+.glow-red-lg {
+  box-shadow: 0 0 45px rgba(240, 20, 40, 0.45);
+}
+
+.glow-red-sm {
+  box-shadow: 0 0 12px rgba(240, 20, 40, 0.25);
+}
+
+.text-glow {
+  text-shadow: 0 0 20px rgba(240, 20, 40, 0.5);
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

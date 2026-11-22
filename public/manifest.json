@@ -1,0 +1,17 @@
+{
+  "short_name": "DevilMotion",
+  "name": "DevilMotion — Cinematic Anime Entertainment Platform",
+  "description": "Stream trending, popular, and scheduled anime releases in high definition.",
+  "icons": [
+    {
+      "src": "/logo_cropped.png",
+      "type": "image/png",
+      "sizes": "192x192 512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#08080A",
+  "theme_color": "#08080A",
+  "display": "standalone",
+  "orientation": "portrait"
+}
