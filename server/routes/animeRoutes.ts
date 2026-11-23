@@ -549,37 +549,9 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
     let dbRecord = null;
 
     // STEP 1: Check Database Cache
-    if (isNumeric) {
-      if (isExplicitMal) {
-        dbRecord = await prisma.anime.findFirst({
-          where: { malId: numericId },
-          include: {
-            episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
-            characters: true,
-            airingSchedules: true,
-          },
-        });
-      } else if (isExplicitAniList) {
-        dbRecord = await prisma.anime.findUnique({
-          where: { anilistId: numericId },
-          include: {
-            episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
-            characters: true,
-            airingSchedules: true,
-          },
-        });
-      } else {
-        // Try AniList ID first, then fallback to MAL ID in DB
-        dbRecord = await prisma.anime.findUnique({
-          where: { anilistId: numericId },
-          include: {
-            episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
-            characters: true,
-            airingSchedules: true,
-          },
-        });
-
-        if (!dbRecord) {
+    try {
+      if (isNumeric) {
+        if (isExplicitMal) {
           dbRecord = await prisma.anime.findFirst({
             where: { malId: numericId },
             include: {
@@ -588,35 +560,68 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
               airingSchedules: true,
             },
           });
-        }
-      }
-    } else {
-      // Check primary key (CUID)
-      dbRecord = await prisma.anime.findUnique({
-        where: { id: cleanId },
-        include: {
-          episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
-          characters: true,
-          airingSchedules: true,
-        },
-      });
+        } else if (isExplicitAniList) {
+          dbRecord = await prisma.anime.findUnique({
+            where: { anilistId: numericId },
+            include: {
+              episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
+              characters: true,
+              airingSchedules: true,
+            },
+          });
+        } else {
+          // Try AniList ID first, then fallback to MAL ID in DB
+          dbRecord = await prisma.anime.findUnique({
+            where: { anilistId: numericId },
+            include: {
+              episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
+              characters: true,
+              airingSchedules: true,
+            },
+          });
 
-      if (!dbRecord) {
-        const cleanTitle = cleanId.replace(/-/g, ' ').trim();
-        dbRecord = await prisma.anime.findFirst({
-          where: {
-            OR: [
-              { titleEnglish: { contains: cleanTitle } },
-              { titleRomaji: { contains: cleanTitle } },
-            ],
-          },
+          if (!dbRecord) {
+            dbRecord = await prisma.anime.findFirst({
+              where: { malId: numericId },
+              include: {
+                episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
+                characters: true,
+                airingSchedules: true,
+              },
+            });
+          }
+        }
+      } else {
+        // Check primary key (CUID)
+        dbRecord = await prisma.anime.findUnique({
+          where: { id: cleanId },
           include: {
             episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
             characters: true,
             airingSchedules: true,
           },
         });
+
+        if (!dbRecord) {
+          const cleanTitle = cleanId.replace(/-/g, ' ').trim();
+          dbRecord = await prisma.anime.findFirst({
+            where: {
+              OR: [
+                { titleEnglish: { contains: cleanTitle } },
+                { titleRomaji: { contains: cleanTitle } },
+              ],
+            },
+            include: {
+              episodes: { orderBy: { episodeNumber: 'asc' }, include: { episodeStreams: true } },
+              characters: true,
+              airingSchedules: true,
+            },
+          });
+        }
       }
+    } catch (dbErr: any) {
+      console.warn('[Anime Details] DB cache read notice:', dbErr.message);
+      dbRecord = null;
     }
 
     // STEP 2: External API Fetch If Not in Database
@@ -680,17 +685,21 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
 
     // STEP 3: Refresh DB record if we just fetched from live API
     if (animeData && (!dbRecord || dbRecord.characters?.length === 0)) {
-      dbRecord = await prisma.anime.findUnique({
-        where: { anilistId: animeData.id },
-        include: {
-          episodes: {
-            orderBy: { episodeNumber: 'asc' },
-            include: { episodeStreams: true },
+      try {
+        dbRecord = await prisma.anime.findUnique({
+          where: { anilistId: animeData.id },
+          include: {
+            episodes: {
+              orderBy: { episodeNumber: 'asc' },
+              include: { episodeStreams: true },
+            },
+            characters: true,
+            airingSchedules: true,
           },
-          characters: true,
-          airingSchedules: true,
-        },
-      });
+        });
+      } catch (dbErr: any) {
+        console.warn('[Anime Details] DB record refresh notice:', dbErr.message);
+      }
     }
 
     const base = animeData || dbRecord;
@@ -862,29 +871,57 @@ animeRouter.get('/:id/episodes', cacheResponse(600), async (req: Request, res: R
     const anilistId = parseInt(id, 10);
     const forceSync = req.query.refresh === 'true';
 
-    let anime = await prisma.anime.findFirst({
-      where: isNaN(anilistId) ? { id } : { anilistId },
-      include: {
-        episodes: {
-          orderBy: { episodeNumber: 'asc' },
-          include: { episodeStreams: true },
+    let anime: any = null;
+    try {
+      anime = await prisma.anime.findFirst({
+        where: isNaN(anilistId) ? { id } : { anilistId },
+        include: {
+          episodes: {
+            orderBy: { episodeNumber: 'asc' },
+            include: { episodeStreams: true },
+          },
         },
-      },
-    });
+      });
+    } catch (dbErr: any) {
+      console.warn('[Anime Episodes] DB lookup notice:', dbErr.message);
+      anime = null;
+    }
 
     if (!anime && !isNaN(anilistId)) {
-      // Fetch details from AniList and ingest to DB first
-      const liveData = await AniListService.getDetails(anilistId);
-      if (liveData) {
-        anime = await prisma.anime.findUnique({
-          where: { anilistId },
-          include: {
-            episodes: {
-              orderBy: { episodeNumber: 'asc' },
-              include: { episodeStreams: true },
-            },
-          },
-        });
+      // Fetch details from AniList directly
+      try {
+        const liveData = await AniListService.getDetails(anilistId);
+        if (liveData) {
+          try {
+            anime = await prisma.anime.findUnique({
+              where: { anilistId },
+              include: {
+                episodes: {
+                  orderBy: { episodeNumber: 'asc' },
+                  include: { episodeStreams: true },
+                },
+              },
+            });
+          } catch {}
+
+          if (!anime) {
+            anime = {
+              id: String(liveData.id),
+              anilistId: liveData.id,
+              malId: liveData.idMal || null,
+              titleEnglish: liveData.title?.english || liveData.title?.romaji || 'Anime',
+              titleRomaji: liveData.title?.romaji || '',
+              format: liveData.format || 'TV',
+              totalEpisodes: liveData.episodes || 12,
+              duration: liveData.duration || 24,
+              coverImage: liveData.coverImage?.large || '',
+              bannerImage: liveData.bannerImage || '',
+              episodes: [],
+            };
+          }
+        }
+      } catch (liveErr: any) {
+        console.warn('[Anime Episodes] Live AniList fetch notice:', liveErr.message);
       }
     }
 

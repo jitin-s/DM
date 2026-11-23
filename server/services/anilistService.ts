@@ -111,8 +111,9 @@ export class AniListService {
           headers: {
             'Content-Type': 'application/json',
             Accept: 'application/json',
+            'User-Agent': 'DevilMotion/2.0 (AnimeStreamingPlatform; +https://devilmotion.com)',
           },
-          timeout: 6000,
+          timeout: 12000,
         }
       );
 
@@ -461,9 +462,13 @@ export class AniListService {
     const data = await this.query(gql, { id });
     const media = data?.Media;
     if (media) {
-      await AnimeAggregationService.ingestAndNormalize(media, { enrichWithJikan: false });
-      if (media.idMal) {
-        AnimeAggregationService.enrichDbAnimeWithJikan(media.id).catch(() => {});
+      try {
+        await AnimeAggregationService.ingestAndNormalize(media, { enrichWithJikan: false });
+        if (media.idMal) {
+          AnimeAggregationService.enrichDbAnimeWithJikan(media.id).catch(() => {});
+        }
+      } catch (ingestErr: any) {
+        console.warn('[AniList] Ingestion to DB notice:', ingestErr.message);
       }
     }
     return media;
@@ -519,9 +524,13 @@ export class AniListService {
       const data = await this.query(gql, { idMal });
       const media = data?.Media;
       if (media) {
-        await AnimeAggregationService.ingestAndNormalize(media, { enrichWithJikan: false });
-        if (media.idMal) {
-          AnimeAggregationService.enrichDbAnimeWithJikan(media.id).catch(() => {});
+        try {
+          await AnimeAggregationService.ingestAndNormalize(media, { enrichWithJikan: false });
+          if (media.idMal) {
+            AnimeAggregationService.enrichDbAnimeWithJikan(media.id).catch(() => {});
+          }
+        } catch (ingestErr: any) {
+          console.warn('[AniList] Ingestion to DB notice:', ingestErr.message);
         }
       }
       return media;

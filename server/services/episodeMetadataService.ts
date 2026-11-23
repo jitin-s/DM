@@ -42,11 +42,17 @@ export class EpisodeMetadataService {
     const { forceSync = false, maxCount = 100 } = options;
 
     // 1. Check existing episodes in database
-    const dbEpisodes = await prisma.episode.findMany({
-      where: { animeId: anime.id },
-      orderBy: { episodeNumber: 'asc' },
-      include: { episodeStreams: true },
-    });
+    let dbEpisodes: any[] = [];
+    try {
+      dbEpisodes = await prisma.episode.findMany({
+        where: { animeId: anime.id },
+        orderBy: { episodeNumber: 'asc' },
+        include: { episodeStreams: true },
+      });
+    } catch (err: any) {
+      console.warn('[EpisodeMetadataService] DB read notice:', err.message);
+      dbEpisodes = [];
+    }
 
     const hasRealTitlesInDb = dbEpisodes.some(
       ep =>
@@ -84,9 +90,33 @@ export class EpisodeMetadataService {
     const enrichmentData = await this.fetchExternalEpisodes(anime, totalCount);
 
     if (enrichmentData.length > 0) {
-      // Upsert episodes into SQLite
-      const upserted = await this.persistEpisodes(anime.id, enrichmentData, anime);
-      return this.formatDbEpisodes(upserted, anime);
+      // Upsert episodes into SQLite if DB is writable
+      try {
+        const upserted = await this.persistEpisodes(anime.id, enrichmentData, anime);
+        if (upserted && upserted.length > 0) {
+          return this.formatDbEpisodes(upserted, anime);
+        }
+      } catch (err: any) {
+        console.warn('[EpisodeMetadataService] DB persist notice:', err.message);
+      }
+
+      // In-memory fallback if DB write fails
+      return enrichmentData.map(e => ({
+        id: `${anime.id}-ep-${e.episodeNumber}`,
+        number: e.episodeNumber,
+        title: e.title || `Episode ${e.episodeNumber}`,
+        japaneseTitle: e.japaneseTitle || null,
+        hasRealTitle: Boolean(e.title && !e.title.toLowerCase().match(/^episode\s+\d+$/i)),
+        isGenericTitle: !e.title || Boolean(e.title.toLowerCase().match(/^episode\s+\d+$/i)),
+        thumbnail: anime.bannerImage || anime.coverImage || '/logo_cropped.png',
+        duration: anime.duration ? `${anime.duration}m` : '24m',
+        airDate: e.airDate ? new Date(e.airDate).toLocaleDateString() : 'Broadcasting',
+        filler: e.filler,
+        recap: e.recap,
+        metadataSource: e.source,
+        subAvailable: true,
+        dubAvailable: true,
+      }));
     }
 
     // 4. If DB already has some episodes, return them

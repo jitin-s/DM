@@ -1,12 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
-// In Vercel serverless environment, if SQLite is used, ensure /tmp has a writable copy
+// In Vercel serverless environment, if SQLite is used, ensure temp directory has a writable copy
 if (process.env.VERCEL) {
   const currentDbUrl = process.env.DATABASE_URL || '';
   if (!currentDbUrl || currentDbUrl.includes('dev.db')) {
-    const tmpDbPath = '/tmp/dev.db';
+    const tmpDbPath = path.join(os.tmpdir(), 'dev.db');
     if (!fs.existsSync(tmpDbPath)) {
       const candidates = [
         path.join(process.cwd(), 'prisma', 'dev.db'),
@@ -28,7 +29,8 @@ if (process.env.VERCEL) {
         } catch {}
       }
     }
-    process.env.DATABASE_URL = `file:${tmpDbPath}?connection_limit=1&timeout=20000`;
+    const cleanUrl = tmpDbPath.replace(/\\/g, '/');
+    process.env.DATABASE_URL = `file:${cleanUrl}?connection_limit=1&timeout=20000`;
   }
 }
 

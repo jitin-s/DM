@@ -7,13 +7,14 @@
 *.cert
 .vercel
 
-# Database files
-dev.db
+# Database temporary files
 dev.db-journal
 dev.db-wal
 dev.db-shm
-*.sqlite
-*.sqlite3
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+!prisma/dev.db
 
 # Logs
 logs

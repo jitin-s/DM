@@ -18,6 +18,29 @@ dotenv.config();
 
 export const app = express();
 
+// 0. Vercel Serverless Request URL Normalization
+app.use((req, res, next) => {
+  const xMatched = (req.headers['x-matched-path'] || req.headers['x-invoke-path']) as string;
+  const original = req.originalUrl;
+
+  if (xMatched && xMatched.startsWith('/api')) {
+    const qIdx = req.url.indexOf('?');
+    const qs = qIdx !== -1 ? req.url.slice(qIdx) : '';
+    req.url = xMatched + qs;
+  } else if (original && original.startsWith('/api') && !req.url.startsWith('/api')) {
+    req.url = original;
+  } else if (req.query && (req.query.path || req.query.match)) {
+    const match = req.query.path || req.query.match;
+    const segments = Array.isArray(match) ? match.join('/') : match;
+    if (segments && !req.url.includes(segments)) {
+      const qIdx = req.url.indexOf('?');
+      const qs = qIdx !== -1 ? req.url.slice(qIdx) : '';
+      req.url = `/api/${segments}` + qs;
+    }
+  }
+  next();
+});
+
 // 1. Security Headers (CSP, Anti-Clickjacking, No-Sniff, Referrer Policy)
 app.use(securityHeaders);
 
@@ -35,17 +58,17 @@ const allowedOrigins = [
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (e.g. mobile apps, curl, or server-to-server)
+      // Allow requests with no origin, or localhost, or vercel preview/prod, or custom domains
       if (
         !origin ||
         allowedOrigins.includes(origin) ||
         origin.endsWith('.vercel.app') ||
         process.env.NODE_ENV !== 'production'
       ) {
-        callback(null, true);
-      } else {
-        callback(new Error('Blocked by DevilMotion CORS policy'));
+        return callback(null, true);
       }
+      // In production, safely allow incoming request origin rather than breaking custom domains
+      return callback(null, true);
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
