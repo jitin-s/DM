@@ -142,6 +142,7 @@ export class VidWaveService {
     skipSec?: number;
     time?: number;
     quality?: 'auto' | '1080' | '720' | '480';
+    host?: string;
   }): string {
     const {
       source,
@@ -153,6 +154,7 @@ export class VidWaveService {
       skipSec = 85,
       time = 0,
       quality = 'auto',
+      host = VIDWAVE_EMBED_HOST,
     } = params;
 
     const query = new URLSearchParams();
@@ -163,7 +165,7 @@ export class VidWaveService {
     if (quality && quality !== 'auto') query.set('q', quality);
 
     const queryString = query.toString();
-    return `${VIDWAVE_EMBED_HOST}/kai/${source}/${id}/${episode}/${audio}${queryString ? `?${queryString}` : ''}`;
+    return `${host}/kai/${source}/${id}/${episode}/${audio}${queryString ? `?${queryString}` : ''}`;
   }
 
   /**
@@ -325,6 +327,7 @@ export class VidWaveService {
       servers = [
         { id: 'kai-anilist', name: 'VidWave Kai (AniList Direct - Auto)', provider: 'KAI', isDefault: true },
         { id: 'kai-hd', name: 'VidWave Kai (1080p Ultra HD)', provider: 'KAI' },
+        { id: 'alt-embed', name: 'VidWave Alternative Stream (Mirror)', provider: 'KAI' },
       ];
 
       if (resolvedMalId) {
@@ -342,12 +345,15 @@ export class VidWaveService {
       let source: 'anilist' | 'mal' = 'anilist';
       let idToUse = resolvedAnilistId;
       let quality: 'auto' | '1080' | '720' | '480' = 'auto';
+      let host = VIDWAVE_EMBED_HOST;
 
       if (currentServer === 'kai-mal' && resolvedMalId) {
         source = 'mal';
         idToUse = resolvedMalId;
       } else if (currentServer === 'kai-hd') {
         quality = '1080';
+      } else if (currentServer === 'alt-embed') {
+        host = VIDWAVE_ALT_HOST;
       }
 
       embedUrl = this.buildKaiUrl({
@@ -360,6 +366,7 @@ export class VidWaveService {
         skipSec: 85,
         time,
         quality,
+        host,
       });
 
       providerName = `VidWave Anime Kai (${source.toUpperCase()} - ${kaiAudio.toUpperCase()})`;

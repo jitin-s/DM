@@ -21,16 +21,18 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { VidWavePlayer } from '../components/player/VidWavePlayer';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
-const formatServerLabel = (server: { id: string; name: string }): string => {
+const formatServerLabel = (server: { id: string; name: string }, index?: number): string => {
   const { id, name } = server;
-  if (id === 'kai-anilist') return 'DevilMotion HD (Auto)';
-  if (id === 'kai-mal') return 'DevilMotion Direct';
-  if (id === 'kai-hd') return 'DevilMotion 1080p Ultra HD';
-  if (id === 'hindi-main') return 'DevilMotion Hindi Server 1';
-  if (id === 'hindi-backup') return 'DevilMotion Hindi Mirror';
+  if (id === 'kai-anilist') return 'Server 1 (DevilMotion HD)';
+  if (id === 'kai-hd') return 'Server 2 (1080p Ultra HD)';
+  if (id === 'kai-mal') return 'Server 3 (Direct Stream)';
+  if (id === 'alt-embed') return 'Server 4 (Backup Mirror)';
+  if (id === 'hindi-main') return 'Server 1 (DevilMotion Hindi)';
+  if (id === 'hindi-backup') return 'Server 2 (Hindi Fast Mirror)';
 
-  return (name || 'DevilMotion Server')
-    .replace(/VidWave\s*Kai/gi, 'DevilMotion Stream')
+  const prefix = typeof index === 'number' ? `Server ${index + 1} - ` : '';
+  return prefix + (name || 'DevilMotion Stream')
+    .replace(/VidWave\s*Kai/gi, 'DevilMotion HD')
     .replace(/VidWave/gi, 'DevilMotion')
     .replace(/AniList Direct/gi, 'Direct HD')
     .replace(/MAL Direct/gi, 'Direct Mirror')
@@ -187,6 +189,19 @@ export const WatchPage: React.FC = () => {
     fetchStreamData(audioTrack, newServerId);
   };
 
+  // Handle player error with automatic failover to the next available server
+  const handlePlayerError = (msg?: string) => {
+    const serversList = streamData?.servers || [];
+    const currentIndex = serversList.findIndex((s: any) => s.id === selectedServer);
+    if (currentIndex !== -1 && currentIndex < serversList.length - 1) {
+      const nextServer = serversList[currentIndex + 1];
+      setSelectedServer(nextServer.id);
+      fetchStreamData(audioTrack, nextServer.id);
+    } else {
+      setStreamError(msg || 'Playback is temporarily unavailable. Please try switching servers or audio.');
+    }
+  };
+
   if (isAnimeLoading) {
     return (
       <div className="pt-40 pb-32 flex flex-col items-center justify-center text-center">
@@ -313,7 +328,7 @@ export const WatchPage: React.FC = () => {
               onTimeUpdate={handleTimeUpdate}
               onComplete={handleNextEp}
               onAutoNext={handleNextEp}
-              onError={(msg) => setStreamError(msg || 'Playback is temporarily unavailable. Please try switching servers.')}
+              onError={handlePlayerError}
               isLoading={isStreamLoading}
               streamError={streamError}
               onRetry={() => fetchStreamData()}
@@ -439,9 +454,9 @@ export const WatchPage: React.FC = () => {
                   <Server className="w-3.5 h-3.5 text-[#F01428]" /> Server:
                 </span>
                 {(streamData?.servers || [
-                  { id: 'kai-anilist', name: 'DevilMotion HD (Auto)' },
-                  { id: 'kai-hd', name: 'DevilMotion 1080p Ultra HD' },
-                ]).map((srv: any) => (
+                  { id: 'kai-anilist', name: 'Server 1 (DevilMotion HD)' },
+                  { id: 'kai-hd', name: 'Server 2 (1080p Ultra HD)' },
+                ]).map((srv: any, idx: number) => (
                   <button
                     key={srv.id}
                     onClick={() => handleServerSwitch(srv.id)}
@@ -452,7 +467,7 @@ export const WatchPage: React.FC = () => {
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full ${selectedServer === srv.id ? 'bg-[#F01428] animate-pulse' : 'bg-[#646478]'}`} />
-                    <span>{formatServerLabel(srv)}</span>
+                    <span>{formatServerLabel(srv, idx)}</span>
                   </button>
                 ))}
 

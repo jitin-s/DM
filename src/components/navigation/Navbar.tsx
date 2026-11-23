@@ -1,23 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, Bookmark, Menu, X } from 'lucide-react';
+import { Search, Bookmark, Menu, X, ChevronDown, Flame, TrendingUp, Star, PlayCircle, Film, Tv, Calendar, Tag } from 'lucide-react';
 import { useWatchlist } from '../../context/WatchlistContext';
 
 interface NavbarProps {
   onOpenSearch: () => void;
 }
 
-const NAV_LINKS = [
+const PRIMARY_LINKS = [
   { name: 'Home', path: '/' },
   { name: 'Anime', path: '/anime' },
+  { name: 'TV Series', path: '/anime?format=TV' },
   { name: 'Movies', path: '/movies' },
-  { name: 'Genres', path: '/genres' },
   { name: 'Schedule', path: '/schedule' },
+  { name: 'Genres', path: '/genres' },
+];
+
+const DISCOVERY_LINKS = [
+  { name: 'Trending', path: '/anime?sort=trending', icon: Flame, color: 'text-orange-500' },
+  { name: 'Popular', path: '/anime?sort=popularity', icon: TrendingUp, color: 'text-[#F01428]' },
+  { name: 'Top Rated', path: '/anime?sort=rating', icon: Star, color: 'text-amber-400' },
+  { name: 'Ongoing', path: '/anime?status=RELEASING', icon: PlayCircle, color: 'text-emerald-400' },
+];
+
+const ALL_MOBILE_LINKS = [
+  { name: 'Home', path: '/', icon: Film },
+  { name: 'All Anime', path: '/anime', icon: Film },
+  { name: 'TV Series', path: '/anime?format=TV', icon: Tv },
+  { name: 'Movies', path: '/movies', icon: Film },
+  { name: 'Trending', path: '/anime?sort=trending', icon: Flame },
+  { name: 'Popular', path: '/anime?sort=popularity', icon: TrendingUp },
+  { name: 'Top Rated', path: '/anime?sort=rating', icon: Star },
+  { name: 'Ongoing', path: '/anime?status=RELEASING', icon: PlayCircle },
+  { name: 'Schedule', path: '/schedule', icon: Calendar },
+  { name: 'Genres', path: '/genres', icon: Tag },
 ];
 
 export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isDiscoverOpen, setIsDiscoverOpen] = useState(false);
+  const discoverRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const { watchlistIds } = useWatchlist();
 
@@ -25,14 +48,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
     };
+    const handleClickOutside = (e: MouseEvent) => {
+      if (discoverRef.current && !discoverRef.current.contains(e.target as Node)) {
+        setIsDiscoverOpen(false);
+      }
+    };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
 
-  // Close mobile menu on route change
+  // Close menus on route change
   useEffect(() => {
     setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+    setIsDiscoverOpen(false);
+  }, [location.pathname, location.search]);
 
   return (
     <>
@@ -45,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Left: Brand Logo */}
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6 lg:gap-8">
             <Link
               to="/"
               className="flex items-center gap-2 group transition-transform duration-200 active:scale-95"
@@ -61,14 +94,14 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center gap-1 lg:gap-2">
-              {NAV_LINKS.map(link => {
-                const isActive = location.pathname === link.path;
+            <nav className="hidden md:flex items-center gap-1">
+              {PRIMARY_LINKS.map(link => {
+                const isActive = location.pathname === link.path && (!link.path.includes('?') || location.search === link.path.slice(link.path.indexOf('?')));
                 return (
                   <Link
                     key={link.name}
                     to={link.path}
-                    className={`relative px-3 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 ${
+                    className={`relative px-2.5 lg:px-3 py-1.5 text-xs lg:text-sm font-semibold rounded-lg transition-all duration-200 ${
                       isActive
                         ? 'text-white bg-white/[0.08]'
                         : 'text-[#9E9EB2] hover:text-white hover:bg-white/[0.04]'
@@ -81,6 +114,38 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
                   </Link>
                 );
               })}
+
+              {/* Discover Dropdown */}
+              <div className="relative" ref={discoverRef}>
+                <button
+                  onClick={() => setIsDiscoverOpen(!isDiscoverOpen)}
+                  className={`flex items-center gap-1 px-2.5 lg:px-3 py-1.5 text-xs lg:text-sm font-semibold rounded-lg transition-all cursor-pointer ${
+                    isDiscoverOpen ? 'text-white bg-white/[0.08]' : 'text-[#9E9EB2] hover:text-white hover:bg-white/[0.04]'
+                  }`}
+                >
+                  <span>Discover</span>
+                  <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isDiscoverOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isDiscoverOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-[#121218] border border-white/10 rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50 backdrop-blur-xl animate-fade-in">
+                    {DISCOVERY_LINKS.map(item => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.path}
+                          onClick={() => setIsDiscoverOpen(false)}
+                          className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-semibold text-[#9E9EB2] hover:text-white hover:bg-white/[0.06] transition-colors"
+                        >
+                          <Icon className={`w-4 h-4 ${item.color}`} />
+                          <span>{item.name}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </nav>
           </div>
 
@@ -128,38 +193,40 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
       {/* Mobile Drawer Navigation */}
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-30 md:hidden bg-black/80 backdrop-blur-md transition-all duration-300">
-          <div className="fixed top-16 right-0 bottom-0 w-3/4 max-w-xs bg-[#0F0F13] border-l border-white/10 p-6 flex flex-col justify-between shadow-2xl">
-            <div className="space-y-6">
-              <div className="flex items-center gap-2 pb-4 border-b border-white/10">
+          <div className="fixed top-16 right-0 bottom-0 w-3/4 max-w-xs bg-[#0F0F13] border-l border-white/10 p-5 flex flex-col justify-between shadow-2xl overflow-y-auto">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-white/10">
                 <img src="/logo_cropped.png" alt="DevilMotion" className="h-6 w-auto" />
               </div>
 
               {/* Mobile Links */}
-              <nav className="flex flex-col space-y-2">
-                {NAV_LINKS.map(link => {
-                  const isActive = location.pathname === link.path;
+              <nav className="flex flex-col space-y-1">
+                {ALL_MOBILE_LINKS.map(link => {
+                  const Icon = link.icon;
+                  const isActive = location.pathname === link.path && (!link.path.includes('?') || location.search === link.path.slice(link.path.indexOf('?')));
                   return (
                     <Link
                       key={link.name}
                       to={link.path}
-                      className={`px-3 py-2.5 rounded-xl text-base font-semibold transition-all ${
+                      className={`flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all ${
                         isActive
                           ? 'bg-[#F01428] text-white shadow-lg shadow-[#F01428]/30'
                           : 'text-[#9E9EB2] hover:text-white hover:bg-white/[0.05]'
                       }`}
                     >
-                      {link.name}
+                      <Icon className="w-4 h-4" />
+                      <span>{link.name}</span>
                     </Link>
                   );
                 })}
               </nav>
 
-              <div className="pt-4 border-t border-white/10 space-y-2">
+              <div className="pt-3 border-t border-white/10 space-y-1">
                 <Link
                   to="/watchlist"
-                  className="flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-[#9E9EB2] hover:text-white hover:bg-white/[0.05]"
+                  className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold text-[#9E9EB2] hover:text-white hover:bg-white/[0.05]"
                 >
-                  <span className="flex items-center gap-2">
+                  <span className="flex items-center gap-2.5">
                     <Bookmark className="w-4 h-4 text-[#F01428]" /> Watchlist
                   </span>
                   {watchlistIds.length > 0 && (
@@ -171,7 +238,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
 
                 <Link
                   to="/search"
-                  className="flex items-center gap-2 px-3 py-2.5 rounded-xl text-sm font-semibold text-[#9E9EB2] hover:text-white hover:bg-white/[0.05]"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-sm font-semibold text-[#9E9EB2] hover:text-white hover:bg-white/[0.05]"
                 >
                   <Search className="w-4 h-4 text-[#F01428]" /> Search Catalog
                 </Link>

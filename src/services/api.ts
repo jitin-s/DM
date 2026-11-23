@@ -316,6 +316,7 @@ export const api = {
             : [
                 { id: 'kai-anilist', name: 'DevilMotion HD (Auto)', provider: 'KAI', isDefault: true },
                 { id: 'kai-hd', name: 'DevilMotion 1080p Ultra HD', provider: 'KAI' },
+                { id: 'alt-embed', name: 'DevilMotion Alternative Stream (Mirror)', provider: 'KAI' },
               ],
           iframeOptions: {
             allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',

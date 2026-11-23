@@ -10,8 +10,9 @@
     "server": "tsx server/index.ts",
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "build": "prisma generate && tsc -b && vite build",
-    "vercel-build": "prisma generate && tsc -b && vite build",
+    "build:api": "esbuild server/apiEntry.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
+    "build": "prisma generate && tsc -b && vite build && npm run build:api",
+    "vercel-build": "prisma generate && tsc -b && vite build && npm run build:api",
     "postinstall": "prisma generate",
     "lint": "oxlint",
     "preview": "vite preview"
