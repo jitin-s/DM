@@ -142,7 +142,7 @@ export const WatchPage: React.FC = () => {
   // Track watch history
   useEffect(() => {
     if (anime?.id) {
-      addToHistory(anime.id);
+      addToHistory(anime.id, anime);
       api
         .saveUserHistory({
           animeId: anime.id,
@@ -153,7 +153,7 @@ export const WatchPage: React.FC = () => {
         })
         .catch(() => {});
     }
-  }, [anime?.id, currentEpNum, addToHistory]);
+  }, [anime, currentEpNum, addToHistory]);
 
   // Mark episode as watched in local storage
   useEffect(() => {

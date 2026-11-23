@@ -5,7 +5,7 @@ import { AnimeCard } from '../components/cards/AnimeCard';
 import { EmptyState } from '../components/ui/EmptyState';
 
 export const WatchlistPage: React.FC = () => {
-  const { watchlistItems, removeFromWatchlist, historyItems } = useWatchlist();
+  const { watchlistItems, removeFromWatchlist, historyItems, removeFromHistory, clearHistory } = useWatchlist();
   const [activeTab, setActiveTab] = useState<'watchlist' | 'history'>('watchlist');
 
   return (
@@ -92,10 +92,30 @@ export const WatchlistPage: React.FC = () => {
                 actionLink="/"
               />
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-5">
-                {historyItems.map(anime => (
-                  <AnimeCard key={anime.id} anime={anime} />
-                ))}
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <button
+                    onClick={clearHistory}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-950/40 border border-red-800/40 hover:bg-[#F01428] text-xs text-red-200 hover:text-white transition-all cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Clear All History</span>
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-5">
+                  {historyItems.map(anime => (
+                    <div key={anime.id} className="relative group">
+                      <AnimeCard anime={anime} />
+                      <button
+                        onClick={() => removeFromHistory(anime.id)}
+                        title="Remove from History"
+                        className="absolute top-2 right-2 z-30 p-1.5 rounded-lg bg-black/80 hover:bg-[#F01428] text-white/70 hover:text-white transition-colors opacity-0 group-hover:opacity-100 shadow-md cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

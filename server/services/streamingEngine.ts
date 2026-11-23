@@ -448,7 +448,7 @@ class MegaPlayAdapter implements StreamingProviderAdapter {
         providerId: 'megaplay',
         embedUrl: `https://megaplay.buzz/stream?id=${anilistId}&ep=${episode}&lang=${audio}`,
         audio,
-        priority: 5 - getProviderPenalty('megaplay-prime'),
+        priority: 3 - getProviderPenalty('megaplay-prime'),
         quality: 'auto',
         iframeOptions: {
           allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',

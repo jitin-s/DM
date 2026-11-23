@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Award, Calendar, Clapperboard, ThumbsUp, Languages, Globe } from 'lucide-react';
+import { Award, Calendar, Clapperboard, ThumbsUp, Languages, Globe, History } from 'lucide-react';
 import { api } from '../services/api';
 import { AnimeItem } from '../types/anime';
+import { useWatchlist } from '../context/WatchlistContext';
 import { HeroCarousel } from '../components/hero/HeroCarousel';
 import { TrendingSection } from '../components/sections/TrendingSection';
 import { RecentlyUpdatedSection } from '../components/sections/RecentlyUpdatedSection';
@@ -11,6 +12,7 @@ import { BrowseGenresSection } from '../components/sections/BrowseGenresSection'
 import { AnimeGridSection } from '../components/sections/AnimeGridSection';
 
 export const HomePage: React.FC = () => {
+  const { historyItems } = useWatchlist();
   const [trending, setTrending] = useState<AnimeItem[]>([]);
   const [popular, setPopular] = useState<AnimeItem[]>([]);
   const [airing, setAiring] = useState<AnimeItem[]>([]);
@@ -79,6 +81,19 @@ export const HomePage: React.FC = () => {
     <div className="space-y-6">
       {/* 1. Featured Anime Hero Banner (DevilMotion Live Spotlight) */}
       <HeroCarousel items={trending.slice(0, 5)} />
+
+      {/* 1.5 Continue Watching (Recorded History) */}
+      {historyItems.length > 0 && (
+        <AnimeGridSection
+          title="Continue Watching"
+          subtitle="Resume playback where you left off"
+          icon={<History className="w-5 h-5 text-[#F01428]" />}
+          items={historyItems}
+          viewAllLink="/history"
+          limit={6}
+          loading={false}
+        />
+      )}
 
       {/* 2. Trending Anime */}
       <TrendingSection items={trending} />

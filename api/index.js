@@ -123,7 +123,8 @@ var securityHeaders = (req, res, next) => {
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self'",
+    "upgrade-insecure-requests"
   ];
   res.setHeader("Content-Security-Policy", cspDirectives.join("; "));
   if (process.env.NODE_ENV === "production" && req.secure) {
@@ -2907,7 +2908,7 @@ var MegaPlayAdapter = class {
         providerId: "megaplay",
         embedUrl: `https://megaplay.buzz/stream?id=${anilistId}&ep=${episode}&lang=${audio}`,
         audio,
-        priority: 5 - getProviderPenalty("megaplay-prime"),
+        priority: 3 - getProviderPenalty("megaplay-prime"),
         quality: "auto",
         iframeOptions: {
           allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",

@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './context/AuthContext';
 import { WatchlistProvider } from './context/WatchlistContext';
 import { Layout } from './components/layout/Layout';
 import { ScrollToTop } from './components/common/ScrollToTop';
@@ -17,6 +18,9 @@ const GenresPage = lazy(() => import('./pages/GenresPage').then(m => ({ default:
 const SchedulePage = lazy(() => import('./pages/SchedulePage').then(m => ({ default: m.SchedulePage })));
 const SearchPage = lazy(() => import('./pages/SearchPage').then(m => ({ default: m.SearchPage })));
 const WatchlistPage = lazy(() => import('./pages/WatchlistPage').then(m => ({ default: m.WatchlistPage })));
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const RegisterPage = lazy(() => import('./pages/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const ProfilePage = lazy(() => import('./pages/ProfilePage').then(m => ({ default: m.ProfilePage })));
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 
 const PageLoadingFallback: React.FC = () => (
@@ -41,8 +45,9 @@ const NotFoundPage: React.FC = () => (
 export const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <WatchlistProvider>
-        <BrowserRouter>
+      <AuthProvider>
+        <WatchlistProvider>
+          <BrowserRouter>
           <ScrollToTop />
           <Routes>
             <Route path="/" element={<Layout />}>
@@ -126,9 +131,30 @@ export const App: React.FC = () => {
                   </Suspense>
                 }
               />
-              <Route path="login" element={<Navigate to="/" replace />} />
-              <Route path="register" element={<Navigate to="/" replace />} />
-              <Route path="profile" element={<Navigate to="/" replace />} />
+              <Route
+                path="login"
+                element={
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <LoginPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="register"
+                element={
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <RegisterPage />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="profile"
+                element={
+                  <Suspense fallback={<PageLoadingFallback />}>
+                    <ProfilePage />
+                  </Suspense>
+                }
+              />
               <Route
                 path="admin"
                 element={
@@ -142,7 +168,8 @@ export const App: React.FC = () => {
           </Routes>
         </BrowserRouter>
       </WatchlistProvider>
-    </ErrorBoundary>
+    </AuthProvider>
+  </ErrorBoundary>
   );
 };
 

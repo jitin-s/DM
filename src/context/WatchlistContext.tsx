@@ -11,6 +11,8 @@ interface WatchlistContextType {
   watchlistItems: AnimeItem[];
   historyIds: string[];
   addToHistory: (id: string, animeItem?: AnimeItem) => void;
+  removeFromHistory: (id: string) => void;
+  clearHistory: () => void;
   historyItems: AnimeItem[];
 }
 
@@ -110,10 +112,21 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const isInWatchlist = useCallback((id: string) => watchlistIds.includes(id), [watchlistIds]);
 
   const addToHistory = useCallback((id: string, animeItem?: AnimeItem) => {
-    setHistoryIds(prev => [id, ...prev.filter(item => item !== id)].slice(0, 20));
+    setHistoryIds(prev => [id, ...prev.filter(item => item !== id)].slice(0, 30));
     if (animeItem) {
       setCachedAnime(c => ({ ...c, [id]: animeItem }));
     }
+  }, []);
+
+  const removeFromHistory = useCallback((id: string) => {
+    setHistoryIds(prev => prev.filter(item => item !== id));
+  }, []);
+
+  const clearHistory = useCallback(() => {
+    setHistoryIds([]);
+    try {
+      localStorage.removeItem('devilmotion_history');
+    } catch {}
   }, []);
 
   const watchlistItems = useMemo(
@@ -136,6 +149,8 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       watchlistItems,
       historyIds,
       addToHistory,
+      removeFromHistory,
+      clearHistory,
       historyItems,
     }),
     [
@@ -147,6 +162,8 @@ export const WatchlistProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       watchlistItems,
       historyIds,
       addToHistory,
+      removeFromHistory,
+      clearHistory,
       historyItems,
     ]
   );

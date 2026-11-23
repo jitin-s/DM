@@ -39,6 +39,7 @@ export const securityHeaders = (req: Request, res: Response, next: NextFunction)
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    "upgrade-insecure-requests",
   ];
 
   res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
