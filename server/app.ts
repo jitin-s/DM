@@ -85,6 +85,18 @@ app.use(globalRateLimiter);
 
 // 5. Mount Routes (mounted at both '/api' and '' so Vercel rewrites work seamlessly)
 const mountApiRoutes = (prefix: string) => {
+  // Base status handler for root API queries
+  const rootPaths = prefix ? [prefix, `${prefix}/`] : ['/'];
+  app.get(rootPaths, (req, res) => {
+    res.json({
+      status: 'online',
+      service: 'DevilMotion API',
+      version: '1.0.0',
+      healthy: true,
+      environment: process.env.VERCEL ? 'vercel-serverless' : 'node-server',
+    });
+  });
+
   // Hardened Health Check
   app.get(`${prefix}/health`, (req, res) => {
     res.json({

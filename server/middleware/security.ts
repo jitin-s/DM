@@ -66,7 +66,7 @@ const rateLimitStores = {
 };
 
 // Periodic garbage collection for expired rate limit entries
-setInterval(() => {
+const gcInterval = setInterval(() => {
   const now = Date.now();
   for (const store of Object.values(rateLimitStores)) {
     for (const [key, value] of store.entries()) {
@@ -76,6 +76,7 @@ setInterval(() => {
     }
   }
 }, 60000);
+if (gcInterval.unref) gcInterval.unref();
 
 export function createRateLimiter(options: {
   windowMs: number;
@@ -90,7 +91,7 @@ export function createRateLimiter(options: {
     // Determine client identifier (IP address)
     const ip =
       (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim() ||
-      req.socket.remoteAddress ||
+      req.socket?.remoteAddress ||
       'unknown';
 
     const now = Date.now();

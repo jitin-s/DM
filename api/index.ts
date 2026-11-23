@@ -1,6 +1,10 @@
 import { app, ensureSeed } from '../server/app';
 
-// Ensure database seed is initialized lazily on cold start
-ensureSeed().catch(() => {});
+// In non-serverless or local dev, ensure seed runs
+if (!process.env.VERCEL) {
+  ensureSeed().catch(() => {});
+}
 
-export default app;
+export default function handler(req: any, res: any) {
+  return app(req, res);
+}

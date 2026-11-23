@@ -9,7 +9,7 @@ interface CacheEntry {
 const memoryCache = new Map<string, CacheEntry>();
 
 // Cache cleaner every 5 minutes
-setInterval(() => {
+const cacheInterval = setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of memoryCache.entries()) {
     if (now > entry.expiresAt) {
@@ -17,6 +17,7 @@ setInterval(() => {
     }
   }
 }, 5 * 60 * 1000);
+if (cacheInterval.unref) cacheInterval.unref();
 
 /**
  * Cache middleware for high-traffic read endpoints (Trending, Popular, Schedule, Details)
