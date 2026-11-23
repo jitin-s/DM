@@ -19,7 +19,6 @@ import { Badge } from '../components/ui/Badge';
 import { AnimeCard } from '../components/cards/AnimeCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { VidWavePlayer } from '../components/player/VidWavePlayer';
-import { GenZCommentsSection } from '../components/common/GenZCommentsSection';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
 const formatServerLabel = (server: { id: string; name: string; whiteLabelName?: string }, index?: number): string => {
@@ -572,12 +571,6 @@ export const WatchPage: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Gen-Z Community Comments Section */}
-            <GenZCommentsSection
-              animeId={anime.id || anime.anilistId}
-              episodeNumber={currentEpNum}
-            />
           </div>
 
           {/* Right Sidebar: Episode Selector & Playlist */}
