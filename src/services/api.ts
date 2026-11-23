@@ -252,29 +252,51 @@ export const api = {
     }
   },
 
-  // --- STREAM RESOLUTION (VidWave Integration) ---
-  async getStreamAvailability(animeId: string): Promise<{
+  // --- STREAM RESOLUTION (Multi-Provider Real-Time Engine) ---
+  async getStreamAvailability(animeId: string, episodeNumber = 1): Promise<{
     animeId: string;
     anilistId: number;
+    episode: number;
     availableAudios: ('sub' | 'dub' | 'hindi')[];
+    languageStatus: {
+      sub: 'available' | 'checking' | 'unavailable';
+      dub: 'available' | 'checking' | 'unavailable';
+      hindi: 'available' | 'checking' | 'unavailable';
+    };
     hasHindi: boolean;
     hasDub: boolean;
     hasSub: boolean;
   }> {
     try {
-      const res = await fetchWithTimeout(`${API_BASE}/stream/${animeId}/availability`);
+      const res = await fetchWithTimeout(`${API_BASE}/stream/${animeId}/availability?ep=${episodeNumber}`);
       if (!res.ok) throw new Error('Availability check failed');
       return await res.json();
     } catch {
       return {
         animeId,
         anilistId: parseInt(animeId, 10) || 16498,
+        episode: episodeNumber,
         availableAudios: ['sub', 'dub'],
+        languageStatus: {
+          sub: 'available',
+          dub: 'available',
+          hindi: 'unavailable',
+        },
         hasHindi: false,
         hasDub: true,
         hasSub: true,
       };
     }
+  },
+
+  async reportStreamFailure(serverId: string): Promise<void> {
+    try {
+      await fetch(`${API_BASE}/stream/report-failure`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serverId }),
+      });
+    } catch {}
   },
 
   async getStream(

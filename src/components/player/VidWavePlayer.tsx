@@ -1,6 +1,19 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Play, Loader2, AlertCircle, RefreshCw, Volume2 } from 'lucide-react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { Play, Loader2, AlertCircle, RefreshCw, Volume2, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
+
+export type StreamingState =
+  | 'IDLE'
+  | 'CHECKING'
+  | 'LANGUAGE_UNAVAILABLE'
+  | 'SOURCE_FOUND'
+  | 'INITIALIZING'
+  | 'READY'
+  | 'BUFFERING'
+  | 'PLAYING'
+  | 'SWITCHING_SOURCE'
+  | 'FAILED'
+  | 'RETRYING';
 
 interface VidWavePlayerProps {
   embedUrl: string | null;
@@ -18,6 +31,8 @@ interface VidWavePlayerProps {
   onRetry?: () => void;
   audio?: 'sub' | 'dub' | 'hindi';
   providerName?: string;
+  streamingState?: StreamingState;
+  onSwitchServer?: () => void;
 }
 
 export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
@@ -35,58 +50,117 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
   streamError = null,
   onRetry,
   audio = 'sub',
-  providerName = 'DevilMotion Player',
+  providerName = 'DevilMotion Stream',
+  streamingState = 'IDLE',
+  onSwitchServer,
 }) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeLoaded, setIframeLoaded] = useState(false);
   const [skipNotification, setSkipNotification] = useState<string | null>(null);
+  const [statusNotification, setStatusNotification] = useState<string | null>(null);
+  const watchdogTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset iframeLoaded state whenever embedUrl changes (e.g. language/server switch)
+  // Reset iframe state when embedUrl changes
   useEffect(() => {
     setIframeLoaded(false);
   }, [embedUrl]);
 
-  // VidWave postMessage communication listener
+  // Watchdog timer: if stream takes >14 seconds to load or initialize, prompt failover
+  useEffect(() => {
+    if (isPlaying && embedUrl && !iframeLoaded) {
+      if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
+      watchdogTimerRef.current = setTimeout(() => {
+        if (!iframeLoaded) {
+          setStatusNotification('Stream is taking longer than expected. Finding another source...');
+          onError?.('Stream initialization timeout. Switching to another available server...');
+        }
+      }, 14000);
+    }
+
+    return () => {
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
+      }
+    };
+  }, [isPlaying, embedUrl, iframeLoaded, onError]);
+
+  // Comprehensive multi-provider postMessage event listener
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      // Validate origin: accept vidwave.sbs and vidwave.site
-      if (!event.origin.includes('vidwave.sbs') && !event.origin.includes('vidwave.site')) {
+      const origin = event.origin || '';
+      // Validate origin against authorized providers: VidWave, AnimeEmbed, MegaPlay
+      const isVidWave = origin.includes('vidwave.sbs') || origin.includes('vidwave.site');
+      const isAnimeEmbed = origin.includes('animeembed.com');
+      const isMegaPlay = origin.includes('megaplay.buzz');
+
+      if (!isVidWave && !isAnimeEmbed && !isMegaPlay) {
         return;
       }
 
       const data = event.data;
       if (!data) return;
 
-      // 1. Time update & watching log
-      if (data.event === 'time') {
-        const currentTime = typeof data.time === 'number' ? data.time : 0;
-        const duration = typeof data.duration === 'number' ? data.duration : 0;
-        const percent = typeof data.percent === 'number' ? data.percent : (duration > 0 ? (currentTime / duration) * 100 : 0);
-        onTimeUpdate?.(currentTime, duration, percent);
-      } else if (data.type === 'watching-log') {
-        const currentTime = typeof data.currentTime === 'number' ? data.currentTime : 0;
-        const duration = typeof data.duration === 'number' ? data.duration : 0;
-        const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
-        onTimeUpdate?.(currentTime, duration, percent);
+      // Clear watchdog timer once events arrive
+      if (watchdogTimerRef.current) {
+        clearTimeout(watchdogTimerRef.current);
+        watchdogTimerRef.current = null;
       }
 
-      // 2. Playback completion / Auto next
-      if (data.event === 'complete') {
-        onComplete?.();
-      } else if (data.event === 'autonext') {
-        onAutoNext?.();
+      // --- 1. VidWave Events ---
+      if (isVidWave) {
+        if (data.event === 'time') {
+          const currentTime = typeof data.time === 'number' ? data.time : 0;
+          const duration = typeof data.duration === 'number' ? data.duration : 0;
+          const percent = typeof data.percent === 'number' ? data.percent : (duration > 0 ? (currentTime / duration) * 100 : 0);
+          onTimeUpdate?.(currentTime, duration, percent);
+        } else if (data.type === 'watching-log') {
+          const currentTime = typeof data.currentTime === 'number' ? data.currentTime : 0;
+          const duration = typeof data.duration === 'number' ? data.duration : 0;
+          const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+          onTimeUpdate?.(currentTime, duration, percent);
+        } else if (data.event === 'complete') {
+          onComplete?.();
+        } else if (data.event === 'autonext') {
+          onAutoNext?.();
+        } else if (data.event === 'skip') {
+          setSkipNotification('Intro automatically skipped');
+          onSkipIntro?.();
+          setTimeout(() => setSkipNotification(null), 3500);
+        } else if (data.event === 'error') {
+          onError?.(data.message || 'Stream playback error');
+        }
       }
 
-      // 3. Skip intro
-      if (data.event === 'skip') {
-        setSkipNotification('Intro automatically skipped');
-        onSkipIntro?.();
-        setTimeout(() => setSkipNotification(null), 3500);
+      // --- 2. AnimeEmbed Events (Documented at animeembed.com/#documentation) ---
+      if (isAnimeEmbed) {
+        const eventType = data.event || data.type;
+        if (eventType === 'ready') {
+          setIframeLoaded(true);
+          setStatusNotification('Your stream is ready.');
+          setTimeout(() => setStatusNotification(null), 3000);
+        } else if (eventType === 'progress' || eventType === 'time') {
+          const currentTime = typeof data.currentTime === 'number' ? data.currentTime : (typeof data.time === 'number' ? data.time : 0);
+          const duration = typeof data.duration === 'number' ? data.duration : 0;
+          const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+          onTimeUpdate?.(currentTime, duration, percent);
+        } else if (eventType === 'ended') {
+          onComplete?.();
+        } else if (eventType === 'error') {
+          onError?.(data.message || 'AnimeEmbed stream error');
+        }
       }
 
-      // 4. Stream error
-      if (data.event === 'error') {
-        onError?.(data.message || 'Stream encounter error');
+      // --- 3. MegaPlay Events ---
+      if (isMegaPlay) {
+        if (data.event === 'time') {
+          const currentTime = typeof data.time === 'number' ? data.time : 0;
+          const duration = typeof data.duration === 'number' ? data.duration : 0;
+          const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+          onTimeUpdate?.(currentTime, duration, percent);
+        } else if (data.event === 'ended') {
+          onComplete?.();
+        }
       }
     };
 
@@ -108,7 +182,7 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
     <div className="relative aspect-video w-full rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl shadow-black group">
       {isPlaying && embedUrl ? (
         <>
-          {/* Active VidWave Stream Iframe */}
+          {/* Active Stream Iframe (Zero Third-Party Branding on Wrapper) */}
           <iframe
             ref={iframeRef}
             src={embedUrl}
@@ -118,22 +192,34 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
             allow="fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
-            onLoad={() => setIframeLoaded(true)}
+            onLoad={() => {
+              setIframeLoaded(true);
+              setStatusNotification('Your stream is ready.');
+              setTimeout(() => setStatusNotification(null), 3000);
+            }}
           />
 
-          {/* Buffering/Loading Indicator during stream initialization or switch */}
+          {/* Staged Loading Overlay */}
           {(!iframeLoaded || isLoading) && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none transition-opacity">
-              <Loader2 className="w-8 h-8 text-[#F01428] animate-spin mb-2" />
-              <span className="text-xs text-white/80 font-medium">Connecting to {providerName}...</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-md pointer-events-none transition-opacity z-20">
+              <Loader2 className="w-9 h-9 text-[#F01428] animate-spin mb-3" />
+              <div className="text-center space-y-1">
+                <p className="text-sm text-white font-semibold">
+                  {streamingState === 'CHECKING' && 'Checking available streaming sources...'}
+                  {streamingState === 'INITIALIZING' && 'Initializing stream player...'}
+                  {streamingState === 'SWITCHING_SOURCE' && 'Switching to backup stream node...'}
+                  {(!streamingState || streamingState === 'IDLE' || streamingState === 'READY') && 'Connecting to DevilMotion Player...'}
+                </p>
+                <p className="text-xs text-[#9E9EB2]">Verifying selected audio and optimizing bandwidth...</p>
+              </div>
             </div>
           )}
 
-          {/* Intro Skip Toast Notification */}
-          {skipNotification && (
-            <div className="absolute bottom-6 left-6 z-30 px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-md border border-[#F01428]/40 text-xs font-semibold text-white shadow-xl animate-fade-in flex items-center gap-2">
+          {/* Real-time Status / Auto-skip Toast */}
+          {(statusNotification || skipNotification) && (
+            <div className="absolute bottom-6 left-6 z-30 px-3.5 py-2 rounded-xl bg-black/85 backdrop-blur-md border border-[#F01428]/40 text-xs font-semibold text-white shadow-xl animate-fade-in flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-[#F01428] animate-ping" />
-              {skipNotification}
+              <span>{statusNotification || skipNotification}</span>
             </div>
           )}
         </>
@@ -151,42 +237,49 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
           )}
 
           {/* Watermark Logo top-left */}
-          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 pointer-events-none opacity-85">
+          <div className="absolute top-4 left-4 z-20 flex items-center gap-2 pointer-events-none opacity-90">
             <img src="/logo_cropped.png" alt="DevilMotion" className="h-5 sm:h-6 w-auto" />
             <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 text-[#F01428] border border-[#F01428]/30">
               1080p Ultra HD
             </span>
           </div>
 
-          {/* Provider & Audio Status Badge top-right */}
+          {/* Audio Status Badge top-right */}
           <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
             <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold border backdrop-blur-md ${currentAudioInfo.color}`}>
               <Volume2 className="w-3.5 h-3.5" />
               <span>{currentAudioInfo.badge}</span>
             </div>
             <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-[11px] text-white border border-white/10">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-[#9E9EB2]">Node:</span>
               <span className="font-semibold text-white">DevilMotion Verified</span>
             </div>
           </div>
 
-          {/* Center Play Button or Loading/Error State */}
+          {/* Center Play Button or Loading / Error State */}
           <div className="absolute inset-0 flex flex-col items-center justify-center z-20 p-4 text-center">
             {isLoading ? (
               <div className="flex flex-col items-center gap-2">
                 <Loader2 className="w-10 h-10 text-[#F01428] animate-spin" />
-                <span className="text-xs text-[#9E9EB2]">Connecting to DevilMotion Player...</span>
+                <span className="text-xs text-[#9E9EB2]">Finding the best available stream...</span>
               </div>
             ) : streamError ? (
               <div className="max-w-md bg-black/85 backdrop-blur-md p-5 rounded-xl border border-red-800/40 space-y-3 shadow-2xl">
                 <AlertCircle className="w-8 h-8 text-[#F01428] mx-auto" />
                 <p className="text-xs text-[#9E9EB2]">{streamError}</p>
-                {onRetry && (
-                  <Button variant="primary" size="sm" onClick={onRetry} icon={<RefreshCw className="w-3.5 h-3.5" />}>
-                    Retry Stream
-                  </Button>
-                )}
+                <div className="flex items-center justify-center gap-2 pt-1">
+                  {onRetry && (
+                    <Button variant="primary" size="sm" onClick={onRetry} icon={<RefreshCw className="w-3.5 h-3.5" />}>
+                      Retry Stream
+                    </Button>
+                  )}
+                  {onSwitchServer && (
+                    <Button variant="outline" size="sm" onClick={onSwitchServer}>
+                      Try Another Server
+                    </Button>
+                  )}
+                </div>
               </div>
             ) : (
               <button

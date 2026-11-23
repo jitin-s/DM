@@ -118,8 +118,8 @@ var securityHeaders = (req, res, next) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
-    "frame-src 'self' https://embed.vidwave.sbs https://embed.vidwave.site https://megaplay.buzz https://vidsrc.to",
-    "connect-src 'self' http://localhost:* http://127.0.0.1:* https://graphql.anilist.co https://api.myanimelist.net https://api.jikan.moe https://embed.vidwave.sbs https://embed.vidwave.site",
+    "frame-src 'self' https://embed.vidwave.sbs https://embed.vidwave.site https://animeembed.com https://megaplay.buzz https://vidsrc.to https://anikotoapi.site",
+    "connect-src 'self' http://localhost:* http://127.0.0.1:* https://graphql.anilist.co https://api.myanimelist.net https://api.jikan.moe https://embed.vidwave.sbs https://embed.vidwave.site https://animeembed.com https://anikotoapi.site",
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",
@@ -2599,310 +2599,499 @@ import { Router as Router3 } from "express";
 // server/services/vidwaveService.ts
 var VIDWAVE_EMBED_HOST = "https://embed.vidwave.sbs";
 var VIDWAVE_ALT_HOST = "https://embed.vidwave.site";
-var hindiAvailabilityCache = /* @__PURE__ */ new Map();
 var HINDI_CACHE_TTL = 1e3 * 60 * 60 * 6;
-var VidWaveService = class {
-  /**
-   * Check if Hindi Dub stream is available for an AniList ID (SSRF-protected)
-   */
-  static async checkHindiAvailability(anilistId, episodeNumber = 1) {
-    const safeId = Math.floor(Math.abs(Number(anilistId)));
-    const safeEp = Math.floor(Math.abs(Number(episodeNumber || 1)));
-    if (isNaN(safeId) || safeId <= 0 || safeEp <= 0 || safeId > 1e7) {
-      return false;
-    }
-    const cached = hindiAvailabilityCache.get(safeId);
-    if (cached && Date.now() - cached.timestamp < HINDI_CACHE_TTL) {
-      return cached.available;
-    }
-    try {
-      const testUrl = `${VIDWAVE_EMBED_HOST}/anime/hindi/${safeId}/${safeEp}?server=main`;
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3500);
-      const res = await fetch(testUrl, {
-        method: "GET",
-        headers: { "User-Agent": "DevilMotion/2.0" },
-        signal: controller.signal
-      });
-      clearTimeout(timeout);
-      const isAvailable = res.status === 200;
-      hindiAvailabilityCache.set(anilistId, { available: isAvailable, timestamp: Date.now() });
-      if (isAvailable) {
-        prisma.anime.updateMany({
-          where: { anilistId },
-          data: { isHindiDubbed: true }
-        }).catch(() => {
-        });
-      }
-      return isAvailable;
-    } catch {
-      return cached?.available || false;
-    }
+
+// server/services/streamingEngine.ts
+var providerFailureCount = /* @__PURE__ */ new Map();
+function reportProviderFailure(serverId) {
+  const current = providerFailureCount.get(serverId) || { failures: 0, lastFailed: 0 };
+  providerFailureCount.set(serverId, {
+    failures: current.failures + 1,
+    lastFailed: Date.now()
+  });
+}
+function getProviderPenalty(serverId) {
+  const stat = providerFailureCount.get(serverId);
+  if (!stat) return 0;
+  if (Date.now() - stat.lastFailed > 15 * 60 * 1e3) {
+    providerFailureCount.delete(serverId);
+    return 0;
   }
-  /**
-   * Determine available audio tracks for an anime
-   */
-  static async getAvailableAudios(anilistId, animeRecord) {
+  return stat.failures * 5;
+}
+var VidWaveKaiAdapter = class {
+  id = "vidwave-kai";
+  name = "VidWave Anime Kai";
+  async getSupportedLanguages(anilistId, animeRecord) {
     const audios = ["sub"];
-    let record = animeRecord;
-    if (!record) {
-      try {
-        record = await prisma.anime.findUnique({
-          where: { anilistId },
-          select: { isHindiDubbed: true, isEnglishDubbed: true, format: true }
-        });
-      } catch {
-      }
-    }
-    if (record?.format !== "MUSIC") {
+    const format = animeRecord?.format;
+    if (format !== "MUSIC") {
       audios.push("dub");
-    }
-    if (record?.isHindiDubbed === true) {
-      audios.push("hindi");
     }
     return audios;
   }
-  /**
-   * Build Provider A (Anime Kai) streaming URL
-   * Format: https://embed.vidwave.sbs/kai/{source}/{id}/{episode}/{audio}?autoplay=1&autonext=1&skipSec=85&t={time}&q={q}
-   */
-  static buildKaiUrl(params) {
-    const {
-      source,
-      id,
-      episode,
-      audio,
-      autoplay = true,
-      autoNext = true,
-      skipSec = 85,
-      time = 0,
-      quality = "auto",
-      host = VIDWAVE_EMBED_HOST
-    } = params;
+  async checkAvailability(params) {
+    if (params.audio === "hindi") return false;
+    return params.episode >= 1 && params.anilistId > 0;
+  }
+  async getSources(params) {
+    const { anilistId, malId, episode, audio, time = 0, autoplay = true, autoNext = true } = params;
+    if (audio === "hindi") return [];
+    const kaiAudio = audio === "dub" ? "dub" : "sub";
     const query = new URLSearchParams();
     if (autoplay) query.set("autoplay", "1");
     if (autoNext) query.set("autonext", "1");
-    if (skipSec) query.set("skipSec", skipSec.toString());
+    query.set("skipSec", "85");
     if (time > 0) query.set("t", Math.floor(time).toString());
-    if (quality && quality !== "auto") query.set("q", quality);
-    const queryString = query.toString();
-    return `${host}/kai/${source}/${id}/${episode}/${audio}${queryString ? `?${queryString}` : ""}`;
-  }
-  /**
-   * Build Provider B (Hindi Anime) streaming URL
-   * Format: https://embed.vidwave.sbs/anime/hindi/{anilistId}/{episode}?server=main&autoplay=1&autoSkipIntro=1&skipSec=85&time={time}
-   */
-  static buildHindiUrl(params) {
-    const {
-      anilistId,
-      episode,
-      server = "main",
-      autoplay = true,
-      autoSkipIntro = true,
-      skipSec = 85,
-      time = 0
-    } = params;
-    const validServer = server === "backup" ? "backup" : "main";
-    const query = new URLSearchParams();
-    query.set("server", validServer);
-    if (autoplay) query.set("autoplay", "1");
-    if (autoSkipIntro) query.set("autoSkipIntro", "1");
-    if (skipSec) query.set("skipSec", skipSec.toString());
-    if (time > 0) query.set("time", Math.floor(time).toString());
-    return `${VIDWAVE_EMBED_HOST}/anime/hindi/${anilistId}/${episode}?${query.toString()}`;
-  }
-  /**
-   * Resolve best playable VidWave stream URL with multi-language and multi-server support
-   */
-  static async resolveStream(params) {
-    const {
-      animeId,
-      episodeNumber,
-      audio = "sub",
-      server,
-      time = 0,
-      autoplay = true,
-      autoNext = true
-    } = params;
-    const anilistNum = parseInt(animeId, 10);
-    const cleanTitle = animeId.replace(/-/g, " ").trim();
-    let resolvedAnilistId = !isNaN(anilistNum) && anilistNum > 0 ? anilistNum : null;
-    let resolvedMalId = null;
-    let animeRecord = null;
-    try {
-      if (resolvedAnilistId) {
-        animeRecord = await prisma.anime.findUnique({
-          where: { anilistId: resolvedAnilistId },
-          include: {
-            episodes: {
-              where: { episodeNumber }
-            }
-          }
-        });
-      }
-      if (!animeRecord && animeId) {
-        animeRecord = await prisma.anime.findFirst({
-          where: {
-            OR: [
-              { id: animeId },
-              { titleEnglish: { contains: cleanTitle } },
-              { titleRomaji: { contains: cleanTitle } }
-            ]
-          },
-          include: {
-            episodes: {
-              where: { episodeNumber }
-            }
-          }
-        });
-      }
-    } catch (dbErr) {
-      console.warn("[VidWaveService] DB lookup warning:", dbErr.message);
-    }
-    if (animeRecord) {
-      resolvedAnilistId = animeRecord.anilistId || resolvedAnilistId;
-      resolvedMalId = animeRecord.malId || null;
-    }
-    if (!resolvedAnilistId) {
-      try {
-        const search = await AniListService.search({ query: cleanTitle, perPage: 1 });
-        if (search.items && search.items.length > 0) {
-          const matched = search.items[0];
-          resolvedAnilistId = matched.id;
-          resolvedMalId = matched.idMal || null;
-          AniListService.getDetails(matched.id).catch(() => {
-          });
-        }
-      } catch (err) {
-        console.warn("[VidWaveService] AniList fallback error:", err.message);
-      }
-    }
-    if (!resolvedAnilistId) {
-      resolvedAnilistId = 16498;
-    }
-    const availableAudios = await this.getAvailableAudios(resolvedAnilistId, animeRecord);
-    let activeAudio = audio;
-    if (activeAudio === "hindi" && !availableAudios.includes("hindi")) {
-      activeAudio = "sub";
-    }
-    let embedUrl = "";
-    let providerName = "";
-    let currentServer = server || "";
-    let servers = [];
-    if (activeAudio === "hindi") {
-      const hindiServer = currentServer === "hindi-backup" ? "main" : "main";
-      embedUrl = this.buildHindiUrl({
-        anilistId: resolvedAnilistId,
-        episode: episodeNumber,
-        server: hindiServer,
-        autoplay,
-        autoSkipIntro: true,
-        skipSec: 85,
-        time
-      });
-      providerName = "VidWave Hindi Anime";
-      currentServer = currentServer || "hindi-main";
-      servers = [
-        { id: "hindi-main", name: "VidWave Hindi (Main Server)", provider: "HINDI", isDefault: true },
-        { id: "hindi-backup", name: "VidWave Hindi (Fast Mirror)", provider: "HINDI" }
-      ];
-    } else {
-      const isDub = activeAudio === "dub";
-      const kaiAudio = isDub ? "dub" : "sub";
-      servers = [
-        { id: "kai-anilist", name: "VidWave Kai (AniList Direct - Auto)", provider: "KAI", isDefault: true },
-        { id: "kai-hd", name: "VidWave Kai (1080p Ultra HD)", provider: "KAI" },
-        { id: "alt-embed", name: "VidWave Alternative Stream (Mirror)", provider: "KAI" }
-      ];
-      if (resolvedMalId) {
-        servers.splice(1, 0, {
-          id: "kai-mal",
-          name: "VidWave Kai (MAL Direct)",
-          provider: "KAI"
-        });
-      }
-      if (!currentServer || !servers.some((s) => s.id === currentServer)) {
-        currentServer = "kai-anilist";
-      }
-      let source = "anilist";
-      let idToUse = resolvedAnilistId;
-      let quality = "auto";
-      let host = VIDWAVE_EMBED_HOST;
-      if (currentServer === "kai-mal" && resolvedMalId) {
-        source = "mal";
-        idToUse = resolvedMalId;
-      } else if (currentServer === "kai-hd") {
-        quality = "1080";
-      } else if (currentServer === "alt-embed") {
-        host = VIDWAVE_ALT_HOST;
-      }
-      embedUrl = this.buildKaiUrl({
-        source,
-        id: idToUse,
-        episode: episodeNumber,
-        audio: kaiAudio,
-        autoplay,
-        autoNext,
-        skipSec: 85,
-        time,
-        quality,
-        host
-      });
-      providerName = `VidWave Anime Kai (${source.toUpperCase()} - ${kaiAudio.toUpperCase()})`;
-    }
-    const targetEpisode = animeRecord?.episodes?.[0];
-    if (targetEpisode) {
-      prisma.streamingProvider.findFirst({ where: { providerName: "VidWave" } }).then(async (prov) => {
-        if (!prov) {
-          prov = await prisma.streamingProvider.create({
-            data: {
-              providerName: "VidWave",
-              providerBaseUrl: VIDWAVE_EMBED_HOST,
-              enabled: true
-            }
-          });
-        }
-        return prisma.episodeStream.upsert({
-          where: {
-            episodeId_providerId_language: {
-              episodeId: targetEpisode.id,
-              providerId: prov.id,
-              language: activeAudio
-            }
-          },
-          update: {
-            embedUrl,
-            availabilityStatus: "AVAILABLE",
-            lastCheckedAt: /* @__PURE__ */ new Date()
-          },
-          create: {
-            episodeId: targetEpisode.id,
-            providerId: prov.id,
-            language: activeAudio,
-            embedUrl,
-            availabilityStatus: "AVAILABLE"
-          }
-        });
-      }).catch(() => {
-      });
-    }
-    return {
-      available: true,
-      embedUrl,
-      provider: providerName,
-      audio: activeAudio,
-      availableAudios,
-      currentServer,
-      servers,
+    const qs = query.toString();
+    const sources = [];
+    sources.push({
+      id: "kai-anilist",
+      name: "VidWave Kai (AniList Direct - Auto)",
+      whiteLabelName: "Server 1 (DevilMotion HD)",
+      providerId: "vidwave-kai",
+      embedUrl: `${VIDWAVE_EMBED_HOST}/kai/anilist/${anilistId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ""}`,
+      audio,
+      isDefault: true,
+      priority: 10 - getProviderPenalty("kai-anilist"),
+      quality: "auto",
       iframeOptions: {
         allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
         referrerPolicy: "strict-origin-when-cross-origin"
       },
+      eventSpec: {
+        originMatches: ["vidwave.sbs", "vidwave.site"],
+        readyEvent: "ready",
+        playEvent: "play",
+        pauseEvent: "pause",
+        errorEvent: "error",
+        timeEvent: "time",
+        completeEvent: "complete"
+      }
+    });
+    const hdQuery = new URLSearchParams(query);
+    hdQuery.set("q", "1080");
+    sources.push({
+      id: "kai-hd",
+      name: "VidWave Kai (1080p Ultra HD)",
+      whiteLabelName: "Server 2 (1080p Ultra HD)",
+      providerId: "vidwave-kai",
+      embedUrl: `${VIDWAVE_EMBED_HOST}/kai/anilist/${anilistId}/${episode}/${kaiAudio}?${hdQuery.toString()}`,
+      audio,
+      priority: 9 - getProviderPenalty("kai-hd"),
+      quality: "1080p",
+      iframeOptions: {
+        allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+        referrerPolicy: "strict-origin-when-cross-origin"
+      },
+      eventSpec: {
+        originMatches: ["vidwave.sbs", "vidwave.site"],
+        readyEvent: "ready",
+        playEvent: "play",
+        pauseEvent: "pause",
+        errorEvent: "error",
+        timeEvent: "time",
+        completeEvent: "complete"
+      }
+    });
+    if (malId && malId > 0) {
+      sources.push({
+        id: "kai-mal",
+        name: "VidWave Kai (MAL Direct)",
+        whiteLabelName: "Server 3 (Direct Stream)",
+        providerId: "vidwave-kai",
+        embedUrl: `${VIDWAVE_EMBED_HOST}/kai/mal/${malId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ""}`,
+        audio,
+        priority: 8 - getProviderPenalty("kai-mal"),
+        quality: "auto",
+        iframeOptions: {
+          allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+          referrerPolicy: "strict-origin-when-cross-origin"
+        },
+        eventSpec: {
+          originMatches: ["vidwave.sbs", "vidwave.site"],
+          readyEvent: "ready",
+          playEvent: "play",
+          pauseEvent: "pause",
+          errorEvent: "error",
+          timeEvent: "time",
+          completeEvent: "complete"
+        }
+      });
+    }
+    sources.push({
+      id: "alt-embed",
+      name: "VidWave Alternative Stream (Mirror)",
+      whiteLabelName: "Server 4 (Backup Mirror)",
+      providerId: "vidwave-kai",
+      embedUrl: `${VIDWAVE_ALT_HOST}/kai/anilist/${anilistId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ""}`,
+      audio,
+      priority: 6 - getProviderPenalty("alt-embed"),
+      quality: "auto",
+      iframeOptions: {
+        allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+        referrerPolicy: "strict-origin-when-cross-origin"
+      },
+      eventSpec: {
+        originMatches: ["vidwave.sbs", "vidwave.site"],
+        readyEvent: "ready",
+        playEvent: "play",
+        pauseEvent: "pause",
+        errorEvent: "error",
+        timeEvent: "time",
+        completeEvent: "complete"
+      }
+    });
+    return sources;
+  }
+};
+var AnimeEmbedAdapter = class {
+  id = "animeembed";
+  name = "AnimeEmbed";
+  async getSupportedLanguages(anilistId, animeRecord) {
+    const audios = ["sub"];
+    if (animeRecord?.format !== "MUSIC") {
+      audios.push("dub");
+    }
+    return audios;
+  }
+  async checkAvailability(params) {
+    if (params.audio === "hindi") return false;
+    return params.episode >= 1 && params.anilistId > 0;
+  }
+  async getSources(params) {
+    const { anilistId, episode, audio, autoplay = true, autoNext = true, time = 0 } = params;
+    if (audio === "hindi") return [];
+    const track = audio === "dub" ? "dub" : "sub";
+    const query = new URLSearchParams({ track });
+    if (autoplay) query.set("autoPlay", "1");
+    if (autoNext) query.set("autoNext", "1");
+    query.set("autoSkip", "1");
+    if (time > 0) query.set("time", Math.floor(time).toString());
+    const embedUrl = `https://animeembed.com/embed/ani/${anilistId}/${episode}?${query.toString()}`;
+    return [
+      {
+        id: "animeembed-direct",
+        name: "AnimeEmbed Rapid Stream",
+        whiteLabelName: "Server 5 (Rapid Stream)",
+        providerId: "animeembed",
+        embedUrl,
+        audio,
+        priority: 7 - getProviderPenalty("animeembed-direct"),
+        quality: "auto",
+        iframeOptions: {
+          allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+          referrerPolicy: "strict-origin-when-cross-origin"
+        },
+        eventSpec: {
+          originMatches: ["animeembed.com"],
+          readyEvent: "ready",
+          playEvent: "play",
+          pauseEvent: "pause",
+          errorEvent: "error",
+          timeEvent: "progress",
+          completeEvent: "ended"
+        }
+      }
+    ];
+  }
+};
+var VidWaveHindiAdapter = class {
+  id = "vidwave-hindi";
+  name = "VidWave Hindi Anime";
+  async getSupportedLanguages(anilistId, animeRecord) {
+    let isHindi = animeRecord?.isHindiDubbed;
+    if (isHindi === void 0) {
+      try {
+        const dbAnime = await prisma.anime.findUnique({
+          where: { anilistId },
+          select: { isHindiDubbed: true }
+        });
+        isHindi = Boolean(dbAnime?.isHindiDubbed);
+      } catch {
+        isHindi = false;
+      }
+    }
+    return isHindi ? ["hindi"] : [];
+  }
+  async checkAvailability(params) {
+    if (params.audio !== "hindi") return false;
+    try {
+      const dbAnime = await prisma.anime.findUnique({
+        where: { anilistId: params.anilistId },
+        select: { isHindiDubbed: true }
+      });
+      return Boolean(dbAnime?.isHindiDubbed);
+    } catch {
+      return false;
+    }
+  }
+  async getSources(params) {
+    const { anilistId, episode, audio, autoplay = true, time = 0 } = params;
+    if (audio !== "hindi") return [];
+    const query = new URLSearchParams({
+      server: "main",
+      autoplay: autoplay ? "1" : "0",
+      autoSkipIntro: "1",
+      skipSec: "85"
+    });
+    if (time > 0) query.set("time", Math.floor(time).toString());
+    return [
+      {
+        id: "hindi-main",
+        name: "VidWave Hindi (Main Server)",
+        whiteLabelName: "Server 1 (DevilMotion Hindi)",
+        providerId: "vidwave-hindi",
+        embedUrl: `${VIDWAVE_EMBED_HOST}/anime/hindi/${anilistId}/${episode}?${query.toString()}`,
+        audio: "hindi",
+        isDefault: true,
+        priority: 10 - getProviderPenalty("hindi-main"),
+        quality: "auto",
+        iframeOptions: {
+          allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+          referrerPolicy: "strict-origin-when-cross-origin"
+        },
+        eventSpec: {
+          originMatches: ["vidwave.sbs", "vidwave.site"],
+          readyEvent: "ready",
+          playEvent: "play",
+          pauseEvent: "pause",
+          errorEvent: "error",
+          timeEvent: "time",
+          completeEvent: "complete"
+        }
+      },
+      {
+        id: "hindi-backup",
+        name: "VidWave Hindi (Fast Mirror)",
+        whiteLabelName: "Server 2 (Hindi Fast Mirror)",
+        providerId: "vidwave-hindi",
+        embedUrl: `${VIDWAVE_EMBED_HOST}/anime/hindi/${anilistId}/${episode}?server=main&autoplay=1&autoSkipIntro=1&skipSec=85`,
+        audio: "hindi",
+        priority: 8 - getProviderPenalty("hindi-backup"),
+        quality: "auto",
+        iframeOptions: {
+          allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+          referrerPolicy: "strict-origin-when-cross-origin"
+        },
+        eventSpec: {
+          originMatches: ["vidwave.sbs", "vidwave.site"],
+          readyEvent: "ready",
+          playEvent: "play",
+          pauseEvent: "pause",
+          errorEvent: "error",
+          timeEvent: "time",
+          completeEvent: "complete"
+        }
+      }
+    ];
+  }
+};
+var MegaPlayAdapter = class {
+  id = "megaplay";
+  name = "MegaPlay Stream";
+  async getSupportedLanguages() {
+    return ["sub", "dub"];
+  }
+  async checkAvailability(params) {
+    return params.episode >= 1 && params.anilistId > 0;
+  }
+  async getSources(params) {
+    const { anilistId, episode, audio } = params;
+    if (audio === "hindi") return [];
+    return [
+      {
+        id: "megaplay-prime",
+        name: "MegaPlay Prime",
+        whiteLabelName: "Server 6 (DevilMotion Prime)",
+        providerId: "megaplay",
+        embedUrl: `https://megaplay.buzz/stream?id=${anilistId}&ep=${episode}&lang=${audio}`,
+        audio,
+        priority: 5 - getProviderPenalty("megaplay-prime"),
+        quality: "auto",
+        iframeOptions: {
+          allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+          referrerPolicy: "strict-origin-when-cross-origin"
+        },
+        eventSpec: {
+          originMatches: ["megaplay.buzz"],
+          readyEvent: "ready",
+          playEvent: "play",
+          pauseEvent: "pause",
+          errorEvent: "error",
+          timeEvent: "time",
+          completeEvent: "ended"
+        }
+      }
+    ];
+  }
+};
+var StreamingEngine = class {
+  static adapters = [
+    new VidWaveKaiAdapter(),
+    new AnimeEmbedAdapter(),
+    new VidWaveHindiAdapter(),
+    new MegaPlayAdapter()
+  ];
+  // In-memory cache for audio availability & server lookups
+  static cache = /* @__PURE__ */ new Map();
+  static CACHE_TTL_MS = 5 * 60 * 1e3;
+  // 5 minutes
+  /**
+   * Verify audio language availability for a specific episode
+   */
+  static async getLanguageAvailability(params) {
+    const { animeId, episode } = params;
+    const anilistNum = parseInt(animeId, 10);
+    const resolvedAnilistId = !isNaN(anilistNum) && anilistNum > 0 ? anilistNum : 16498;
+    const cacheKey = `lang_avail_${resolvedAnilistId}_${episode}`;
+    const cached = this.cache.get(cacheKey);
+    if (cached && Date.now() < cached.expiry) {
+      return cached.data;
+    }
+    let animeRecord = null;
+    try {
+      animeRecord = await prisma.anime.findUnique({
+        where: { anilistId: resolvedAnilistId },
+        select: { isHindiDubbed: true, isEnglishDubbed: true, format: true }
+      });
+    } catch {
+    }
+    const confirmedAudios = /* @__PURE__ */ new Set(["sub"]);
+    if (animeRecord?.format !== "MUSIC") {
+      confirmedAudios.add("dub");
+    }
+    if (animeRecord?.isHindiDubbed === true) {
+      confirmedAudios.add("hindi");
+    }
+    const availableAudios = Array.from(confirmedAudios);
+    const result = {
+      animeId,
+      anilistId: resolvedAnilistId,
+      episode,
+      availableAudios,
+      languageStatus: {
+        sub: "available",
+        dub: confirmedAudios.has("dub") ? "available" : "unavailable",
+        hindi: confirmedAudios.has("hindi") ? "available" : "unavailable"
+      }
+    };
+    this.cache.set(cacheKey, { data: result, expiry: Date.now() + this.CACHE_TTL_MS });
+    return result;
+  }
+  /**
+   * Resolve all working stream sources for anime, episode, and audio
+   */
+  static async resolveStream(params) {
+    const { animeId, episodeNumber, audio, server, time, autoplay, autoNext } = params;
+    const anilistNum = parseInt(animeId, 10);
+    let resolvedAnilistId = !isNaN(anilistNum) && anilistNum > 0 ? anilistNum : 16498;
+    let resolvedMalId = null;
+    let animeRecord = null;
+    try {
+      animeRecord = await prisma.anime.findUnique({
+        where: { anilistId: resolvedAnilistId },
+        select: { id: true, anilistId: true, malId: true, isHindiDubbed: true, format: true, titleEnglish: true, titleRomaji: true }
+      });
+      if (animeRecord) {
+        resolvedMalId = animeRecord.malId;
+      }
+    } catch {
+    }
+    if (!resolvedMalId) {
+      try {
+        const details = await AniListService.getDetails(resolvedAnilistId);
+        if (details?.idMal) {
+          resolvedMalId = details.idMal;
+        }
+      } catch {
+      }
+    }
+    const langInfo = await this.getLanguageAvailability({
+      animeId,
+      episode: episodeNumber
+    });
+    let activeAudio = audio;
+    if (activeAudio === "hindi" && !langInfo.availableAudios.includes("hindi")) {
+      activeAudio = "sub";
+    }
+    const allSourcePromises = this.adapters.map(
+      (adapter) => adapter.getSources({
+        anilistId: resolvedAnilistId,
+        malId: resolvedMalId,
+        episode: episodeNumber,
+        audio: activeAudio,
+        time,
+        autoplay,
+        autoNext
+      }).catch(() => [])
+    );
+    const sourceArrays = await Promise.all(allSourcePromises);
+    const flattenedSources = sourceArrays.flat();
+    flattenedSources.sort((a, b) => b.priority - a.priority);
+    if (flattenedSources.length === 0) {
+      const fallbackUrl = activeAudio === "hindi" ? `${VIDWAVE_EMBED_HOST}/anime/hindi/${resolvedAnilistId}/${episodeNumber}?server=main&autoplay=1` : `${VIDWAVE_EMBED_HOST}/kai/anilist/${resolvedAnilistId}/${episodeNumber}/${activeAudio}?autoplay=1`;
+      return {
+        available: true,
+        embedUrl: fallbackUrl,
+        provider: "DevilMotion Auto Stream",
+        audio: activeAudio,
+        availableAudios: langInfo.availableAudios,
+        currentServer: "kai-anilist",
+        servers: [
+          {
+            id: "kai-anilist",
+            name: "DevilMotion HD (Auto)",
+            whiteLabelName: "Server 1 (DevilMotion HD)",
+            providerId: "vidwave-kai",
+            embedUrl: fallbackUrl,
+            audio: activeAudio,
+            priority: 10,
+            iframeOptions: {
+              allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+              referrerPolicy: "strict-origin-when-cross-origin"
+            },
+            eventSpec: {
+              originMatches: ["vidwave.sbs", "vidwave.site"],
+              readyEvent: "ready",
+              playEvent: "play",
+              pauseEvent: "pause",
+              errorEvent: "error",
+              timeEvent: "time",
+              completeEvent: "complete"
+            }
+          }
+        ],
+        iframeOptions: {
+          allow: "fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture",
+          referrerPolicy: "strict-origin-when-cross-origin"
+        },
+        metadata: {
+          anilistId: resolvedAnilistId,
+          malId: resolvedMalId,
+          episodeNumber,
+          title: animeRecord?.titleEnglish || animeRecord?.titleRomaji || "Anime"
+        }
+      };
+    }
+    let selected = flattenedSources.find((s) => s.id === server);
+    if (!selected) {
+      selected = flattenedSources[0];
+    }
+    return {
+      available: true,
+      embedUrl: selected.embedUrl,
+      provider: selected.whiteLabelName,
+      audio: activeAudio,
+      availableAudios: langInfo.availableAudios,
+      currentServer: selected.id,
+      servers: flattenedSources,
+      iframeOptions: selected.iframeOptions,
       metadata: {
         anilistId: resolvedAnilistId,
         malId: resolvedMalId,
         episodeNumber,
-        title: animeRecord?.titleEnglish || animeRecord?.titleRomaji
+        title: animeRecord?.titleEnglish || animeRecord?.titleRomaji || "Anime"
       }
     };
   }
@@ -2911,19 +3100,23 @@ var VidWaveService = class {
 // server/routes/streamRoutes.ts
 var streamRouter = Router3();
 var VALID_AUDIOS = ["sub", "dub", "hindi"];
-streamRouter.get("/:animeId/availability", cacheResponse(1800), async (req, res) => {
+streamRouter.get("/:animeId/availability", cacheResponse(300), async (req, res) => {
   try {
     const rawId = sanitizeString(req.params.animeId, 100);
-    const anilistNum = parseInt(rawId, 10);
-    const resolvedAnilistId = !isNaN(anilistNum) && anilistNum > 0 ? anilistNum : 16498;
-    const availableAudios = await VidWaveService.getAvailableAudios(resolvedAnilistId);
+    const episode = sanitizeNumber(req.query.ep, 1, 5e3, 1);
+    const result = await StreamingEngine.getLanguageAvailability({
+      animeId: rawId,
+      episode
+    });
     return res.json({
       animeId: rawId,
-      anilistId: resolvedAnilistId,
-      availableAudios,
-      hasHindi: availableAudios.includes("hindi"),
-      hasDub: availableAudios.includes("dub"),
-      hasSub: availableAudios.includes("sub")
+      anilistId: result.anilistId,
+      episode,
+      availableAudios: result.availableAudios,
+      languageStatus: result.languageStatus,
+      hasHindi: result.availableAudios.includes("hindi"),
+      hasDub: result.availableAudios.includes("dub"),
+      hasSub: result.availableAudios.includes("sub")
     });
   } catch (error) {
     console.error("[Stream API] Availability check error:", error.message);
@@ -2945,7 +3138,7 @@ streamRouter.get("/:animeId/:episodeNumber", async (req, res) => {
     const time = rawTime && !isNaN(rawTime) && rawTime >= 0 && rawTime < 1e5 ? rawTime : void 0;
     const autoplay = req.query.autoplay !== "false";
     const autoNext = req.query.autonext !== "false";
-    const streamResult = await VidWaveService.resolveStream({
+    const streamResult = await StreamingEngine.resolveStream({
       animeId,
       episodeNumber: epNum,
       audio: audioParam,
@@ -2963,6 +3156,13 @@ streamRouter.get("/:animeId/:episodeNumber", async (req, res) => {
     console.error("[Stream API] Stream resolution error:", error.message);
     return res.status(500).json({ error: "Playback source is temporarily unavailable" });
   }
+});
+streamRouter.post("/report-failure", (req, res) => {
+  const { serverId } = req.body || {};
+  if (serverId && typeof serverId === "string") {
+    reportProviderFailure(sanitizeString(serverId, 50));
+  }
+  return res.json({ status: "recorded" });
 });
 
 // server/routes/userRoutes.ts

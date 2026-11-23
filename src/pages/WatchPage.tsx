@@ -27,6 +27,8 @@ const formatServerLabel = (server: { id: string; name: string }, index?: number)
   if (id === 'kai-hd') return 'Server 2 (1080p Ultra HD)';
   if (id === 'kai-mal') return 'Server 3 (Direct Stream)';
   if (id === 'alt-embed') return 'Server 4 (Backup Mirror)';
+  if (id === 'animeembed-direct') return 'Server 5 (Rapid Stream)';
+  if (id === 'megaplay-prime') return 'Server 6 (Prime Stream)';
   if (id === 'hindi-main') return 'Server 1 (DevilMotion Hindi)';
   if (id === 'hindi-backup') return 'Server 2 (Hindi Fast Mirror)';
 
@@ -34,9 +36,11 @@ const formatServerLabel = (server: { id: string; name: string }, index?: number)
   return prefix + (name || 'DevilMotion Stream')
     .replace(/VidWave\s*Kai/gi, 'DevilMotion HD')
     .replace(/VidWave/gi, 'DevilMotion')
+    .replace(/AnimeEmbed/gi, 'DevilMotion')
     .replace(/AniList Direct/gi, 'Direct HD')
     .replace(/MAL Direct/gi, 'Direct Mirror')
-    .replace(/MegaPlay/gi, 'DevilMotion');
+    .replace(/MegaPlay/gi, 'DevilMotion')
+    .replace(/Anikoto/gi, 'DevilMotion');
 };
 
 export const WatchPage: React.FC = () => {
@@ -52,14 +56,25 @@ export const WatchPage: React.FC = () => {
   const [streamData, setStreamData] = useState<any>(null);
   const [isStreamLoading, setIsStreamLoading] = useState(true);
   const [streamError, setStreamError] = useState<string | null>(null);
+  const [streamingState, setStreamingState] = useState<'IDLE' | 'CHECKING' | 'LANGUAGE_UNAVAILABLE' | 'SOURCE_FOUND' | 'INITIALIZING' | 'READY' | 'BUFFERING' | 'PLAYING' | 'SWITCHING_SOURCE' | 'FAILED' | 'RETRYING'>('IDLE');
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedServer, setSelectedServer] = useState<string>('kai-anilist');
   const [audioTrack, setAudioTrack] = useState<'sub' | 'dub' | 'hindi'>('sub');
   const [availableAudios, setAvailableAudios] = useState<('sub' | 'dub' | 'hindi')[]>(['sub', 'dub']);
+  const [languageStatus, setLanguageStatus] = useState<{
+    sub: 'available' | 'checking' | 'unavailable';
+    dub: 'available' | 'checking' | 'unavailable';
+    hindi: 'available' | 'checking' | 'unavailable';
+  }>({
+    sub: 'available',
+    dub: 'checking',
+    hindi: 'checking',
+  });
   const [cinemaMode, setCinemaMode] = useState(false);
   const [epSearch, setEpSearch] = useState('');
   const lastSavedTimeRef = useRef<number>(0);
+  const lastProgressSecondsRef = useRef<number>(0);
 
   const [watchedEpisodes, setWatchedEpisodes] = useState<number[]>(() => {
     try {
@@ -79,7 +94,6 @@ export const WatchPage: React.FC = () => {
       .then(res => {
         if (res) {
           setAnime(res);
-          // Set initial audio availability based on anime metadata
           const audios: ('sub' | 'dub' | 'hindi')[] = ['sub', 'dub'];
           if (res.isHindiDubbed) audios.push('hindi');
           setAvailableAudios(audios);
@@ -93,19 +107,37 @@ export const WatchPage: React.FC = () => {
       });
   }, [id]);
 
-  // Check live stream audio availability
+  // Check live stream audio availability whenever anime or episode changes
   useEffect(() => {
     if (!anime) return;
     const animeIdentifier = anime.anilistId || anime.id;
+    setLanguageStatus(prev => ({ ...prev, dub: 'checking', hindi: 'checking' }));
+
     api
-      .getStreamAvailability(animeIdentifier)
+      .getStreamAvailability(animeIdentifier, currentEpNum)
       .then(res => {
-        if (res?.availableAudios && res.availableAudios.length > 0) {
+        if (res?.availableAudios) {
           setAvailableAudios(res.availableAudios);
         }
+        if (res?.languageStatus) {
+          setLanguageStatus(res.languageStatus);
+        }
+        // If current audio is not available on this episode, auto-switch to available audio
+        if (res?.availableAudios && !res.availableAudios.includes(audioTrack)) {
+          const fallback = res.availableAudios.includes('sub') ? 'sub' : res.availableAudios[0];
+          if (fallback && fallback !== audioTrack) {
+            setAudioTrack(fallback);
+          }
+        }
       })
-      .catch(() => {});
-  }, [anime?.id, anime?.anilistId]);
+      .catch(() => {
+        setLanguageStatus({
+          sub: 'available',
+          dub: 'available',
+          hindi: 'unavailable',
+        });
+      });
+  }, [anime?.id, anime?.anilistId, currentEpNum]);
 
   // Track watch history
   useEffect(() => {
@@ -135,20 +167,23 @@ export const WatchPage: React.FC = () => {
     });
   }, [currentEpNum, id]);
 
-  // Resolve VidWave Stream Embed URL
-  const fetchStreamData = useCallback((targetAudio?: 'sub' | 'dub' | 'hindi', targetServer?: string) => {
+  // Resolve Real-Time Stream Embed across all configured providers
+  const fetchStreamData = useCallback((targetAudio?: 'sub' | 'dub' | 'hindi', targetServer?: string, seekTime?: number) => {
     if (!anime) return;
     setIsStreamLoading(true);
     setStreamError(null);
+    setStreamingState('CHECKING');
 
     const activeAudio = targetAudio || audioTrack;
     const activeServer = targetServer !== undefined ? targetServer : selectedServer;
     const animeIdentifier = anime.anilistId || anime.id;
+    const timeToSeek = seekTime !== undefined ? seekTime : lastProgressSecondsRef.current;
 
     api
-      .getStream(animeIdentifier, currentEpNum, activeAudio, activeServer)
+      .getStream(animeIdentifier, currentEpNum, activeAudio, activeServer, timeToSeek)
       .then(data => {
         setStreamData(data);
+        setStreamingState('SOURCE_FOUND');
         if (data?.stream?.availableAudios) {
           setAvailableAudios(data.stream.availableAudios);
         }
@@ -156,10 +191,14 @@ export const WatchPage: React.FC = () => {
           setSelectedServer(data.stream.currentServer);
         }
         if (!data?.stream?.available && !data?.stream?.embedUrl) {
+          setStreamingState('FAILED');
           setStreamError('Playback is temporarily unavailable. Please retry or switch servers.');
+        } else {
+          setStreamingState('READY');
         }
       })
       .catch(() => {
+        setStreamingState('FAILED');
         setStreamError('Failed to establish connection with DevilMotion streaming node.');
       })
       .finally(() => {
@@ -179,25 +218,32 @@ export const WatchPage: React.FC = () => {
     // Pick appropriate default server for new audio
     const defaultServer = newAudio === 'hindi' ? 'hindi-main' : 'kai-anilist';
     setSelectedServer(defaultServer);
-    fetchStreamData(newAudio, defaultServer);
+    fetchStreamData(newAudio, defaultServer, lastProgressSecondsRef.current);
   };
 
   // Handle switching streaming server
   const handleServerSwitch = (newServerId: string) => {
     if (newServerId === selectedServer) return;
     setSelectedServer(newServerId);
-    fetchStreamData(audioTrack, newServerId);
+    fetchStreamData(audioTrack, newServerId, lastProgressSecondsRef.current);
   };
 
   // Handle player error with automatic failover to the next available server
   const handlePlayerError = (msg?: string) => {
+    if (selectedServer) {
+      api.reportStreamFailure(selectedServer).catch(() => {});
+    }
+
     const serversList = streamData?.servers || [];
     const currentIndex = serversList.findIndex((s: any) => s.id === selectedServer);
     if (currentIndex !== -1 && currentIndex < serversList.length - 1) {
       const nextServer = serversList[currentIndex + 1];
+      console.log(`[Playback Auto-Switch] Switching from ${selectedServer} to ${nextServer.id}`);
+      setStreamingState('SWITCHING_SOURCE');
       setSelectedServer(nextServer.id);
-      fetchStreamData(audioTrack, nextServer.id);
+      fetchStreamData(audioTrack, nextServer.id, lastProgressSecondsRef.current);
     } else {
+      setStreamingState('FAILED');
       setStreamError(msg || 'Playback is temporarily unavailable. Please try switching servers or audio.');
     }
   };
@@ -257,6 +303,7 @@ export const WatchPage: React.FC = () => {
   };
 
   const handleTimeUpdate = (currentTime: number, duration: number) => {
+    lastProgressSecondsRef.current = currentTime;
     // Debounce saving progress to user history every 15 seconds
     if (Math.abs(currentTime - lastSavedTimeRef.current) > 15 && anime?.id) {
       lastSavedTimeRef.current = currentTime;
@@ -318,7 +365,7 @@ export const WatchPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Video Stream Player Container */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Dedicated Responsive VidWave Player */}
+            {/* Dedicated Responsive DevilMotion Real-Time Player */}
             <VidWavePlayer
               embedUrl={embedUrl}
               title={`${anime.title.english || anime.title.romaji} - Episode ${currentEpNum}`}
@@ -333,7 +380,9 @@ export const WatchPage: React.FC = () => {
               streamError={streamError}
               onRetry={() => fetchStreamData()}
               audio={audioTrack}
-              providerName="DevilMotion Player"
+              providerName="DevilMotion Stream Node"
+              streamingState={streamingState}
+              onSwitchServer={() => handlePlayerError()}
             />
 
             {/* Video Meta & Controls Strip */}
@@ -377,42 +426,55 @@ export const WatchPage: React.FC = () => {
                   <div className="flex p-0.5 rounded-lg bg-[#1C1C26] border border-white/10 shadow-inner">
                     <button
                       onClick={() => handleAudioSwitch('sub')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                         audioTrack === 'sub'
                           ? 'bg-[#F01428] text-white shadow-md shadow-[#F01428]/30 font-extrabold'
                           : 'text-[#9E9EB2] hover:text-white'
                       }`}
-                      title="Japanese Audio with Multi Subtitles"
+                      title="Japanese Audio (Verified for Episode)"
                     >
                       <span>🇯🇵</span>
                       <span>SUB</span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                     </button>
 
                     <button
                       onClick={() => handleAudioSwitch('dub')}
-                      className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                      disabled={languageStatus.dub === 'unavailable'}
+                      className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed ${
                         audioTrack === 'dub'
                           ? 'bg-[#F01428] text-white shadow-md shadow-[#F01428]/30 font-extrabold'
                           : 'text-[#9E9EB2] hover:text-white'
                       }`}
-                      title="English Dubbed Audio"
+                      title={languageStatus.dub === 'unavailable' ? 'English Dub not available for this episode' : 'English Dubbed Audio'}
                     >
                       <span>🇬🇧</span>
                       <span>DUB</span>
+                      {languageStatus.dub === 'checking' ? (
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                      ) : languageStatus.dub === 'available' ? (
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      ) : null}
                     </button>
 
                     {availableAudios.includes('hindi') && (
                       <button
                         onClick={() => handleAudioSwitch('hindi')}
-                        className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        disabled={languageStatus.hindi === 'unavailable'}
+                        className={`px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed ${
                           audioTrack === 'hindi'
                             ? 'bg-[#F01428] text-white shadow-md shadow-[#F01428]/30 font-extrabold'
                             : 'text-[#9E9EB2] hover:text-white'
                         }`}
-                        title="Hindi Dubbed Audio (DevilMotion Hindi)"
+                        title={languageStatus.hindi === 'unavailable' ? 'Hindi Dub not available for this episode' : 'Hindi Dubbed Audio'}
                       >
                         <span>🇮🇳</span>
                         <span>HINDI</span>
+                        {languageStatus.hindi === 'checking' ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                        ) : languageStatus.hindi === 'available' ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        ) : null}
                       </button>
                     )}
                   </div>
@@ -456,6 +518,8 @@ export const WatchPage: React.FC = () => {
                 {(streamData?.servers || [
                   { id: 'kai-anilist', name: 'Server 1 (DevilMotion HD)' },
                   { id: 'kai-hd', name: 'Server 2 (1080p Ultra HD)' },
+                  { id: 'alt-embed', name: 'Server 4 (Backup Mirror)' },
+                  { id: 'animeembed-direct', name: 'Server 5 (Rapid Stream)' },
                 ]).map((srv: any, idx: number) => (
                   <button
                     key={srv.id}
