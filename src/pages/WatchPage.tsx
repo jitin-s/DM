@@ -19,28 +19,21 @@ import { Badge } from '../components/ui/Badge';
 import { AnimeCard } from '../components/cards/AnimeCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { VidWavePlayer } from '../components/player/VidWavePlayer';
+import { GenZCommentsSection } from '../components/common/GenZCommentsSection';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
-const formatServerLabel = (server: { id: string; name: string }, index?: number): string => {
-  const { id, name } = server;
-  if (id === 'kai-anilist') return 'Server 1 (DevilMotion HD)';
-  if (id === 'kai-hd') return 'Server 2 (1080p Ultra HD)';
-  if (id === 'kai-mal') return 'Server 3 (Direct Stream)';
-  if (id === 'alt-embed') return 'Server 4 (Backup Mirror)';
-  if (id === 'animeembed-direct') return 'Server 5 (Rapid Stream)';
-  if (id === 'megaplay-prime') return 'Server 6 (Prime Stream)';
-  if (id === 'hindi-main') return 'Server 1 (DevilMotion Hindi)';
-  if (id === 'hindi-backup') return 'Server 2 (Hindi Fast Mirror)';
+const formatServerLabel = (server: { id: string; name: string; whiteLabelName?: string }, index?: number): string => {
+  if (server.whiteLabelName) return server.whiteLabelName;
+  const { id } = server;
+  if (id === 'aniembed-ultra') return 'Stream 1 (Ultra)';
+  if (id === 'animeembed-direct') return 'Stream 2 (Rapid)';
+  if (id === 'alt-embed') return 'Stream 3 (Mirror)';
+  if (id === 'kai-mal') return 'Stream 4 (Direct Mirror)';
+  if (id === 'hindi-main') return 'Stream 1 (Hindi Direct)';
+  if (id === 'hindi-backup') return 'Stream 2 (Hindi Mirror)';
+  if (id === 'megaplay-prime') return 'Stream 5 (Backup)';
 
-  const prefix = typeof index === 'number' ? `Server ${index + 1} - ` : '';
-  return prefix + (name || 'DevilMotion Stream')
-    .replace(/VidWave\s*Kai/gi, 'DevilMotion HD')
-    .replace(/VidWave/gi, 'DevilMotion')
-    .replace(/AnimeEmbed/gi, 'DevilMotion')
-    .replace(/AniList Direct/gi, 'Direct HD')
-    .replace(/MAL Direct/gi, 'Direct Mirror')
-    .replace(/MegaPlay/gi, 'DevilMotion')
-    .replace(/Anikoto/gi, 'DevilMotion');
+  return typeof index === 'number' ? `Stream ${index + 1}` : (server.name || 'Stream');
 };
 
 export const WatchPage: React.FC = () => {
@@ -59,7 +52,7 @@ export const WatchPage: React.FC = () => {
   const [streamingState, setStreamingState] = useState<'IDLE' | 'CHECKING' | 'LANGUAGE_UNAVAILABLE' | 'SOURCE_FOUND' | 'INITIALIZING' | 'READY' | 'BUFFERING' | 'PLAYING' | 'SWITCHING_SOURCE' | 'FAILED' | 'RETRYING'>('IDLE');
 
   const [isPlaying, setIsPlaying] = useState(false);
-  const [selectedServer, setSelectedServer] = useState<string>('kai-anilist');
+  const [selectedServer, setSelectedServer] = useState<string>('aniembed-ultra');
   const [audioTrack, setAudioTrack] = useState<'sub' | 'dub' | 'hindi'>('sub');
   const [availableAudios, setAvailableAudios] = useState<('sub' | 'dub' | 'hindi')[]>(['sub', 'dub']);
   const [languageStatus, setLanguageStatus] = useState<{
@@ -122,8 +115,8 @@ export const WatchPage: React.FC = () => {
         if (res?.languageStatus) {
           setLanguageStatus(res.languageStatus);
         }
-        // If current audio is not available on this episode, auto-switch to available audio
-        if (res?.availableAudios && !res.availableAudios.includes(audioTrack)) {
+        // If current audio is not available on this episode (and user didn't explicitly pick hindi), auto-switch
+        if (audioTrack !== 'hindi' && res?.availableAudios && !res.availableAudios.includes(audioTrack)) {
           const fallback = res.availableAudios.includes('sub') ? 'sub' : res.availableAudios[0];
           if (fallback && fallback !== audioTrack) {
             setAudioTrack(fallback);
@@ -216,7 +209,7 @@ export const WatchPage: React.FC = () => {
     setAudioTrack(newAudio);
 
     // Pick appropriate default server for new audio
-    const defaultServer = newAudio === 'hindi' ? 'hindi-main' : 'kai-anilist';
+    const defaultServer = newAudio === 'hindi' ? 'hindi-main' : 'aniembed-ultra';
     setSelectedServer(defaultServer);
     fetchStreamData(newAudio, defaultServer, lastProgressSecondsRef.current);
   };
@@ -385,6 +378,37 @@ export const WatchPage: React.FC = () => {
               onSwitchServer={() => handlePlayerError()}
             />
 
+            {/* Explicit Notice when Hindi Dub is requested but unavailable for this episode */}
+            {audioTrack === 'hindi' && (languageStatus.hindi === 'unavailable' || (streamData && streamData?.stream?.available === false)) && (
+              <div className="bg-[#1C1C26] border border-amber-500/40 rounded-2xl p-4 sm:p-5 text-center space-y-3 backdrop-blur-md shadow-xl animate-fade-in">
+                <div className="w-10 h-10 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto border border-amber-500/30">
+                  <Volume2 className="w-5 h-5" />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm sm:text-base font-bold text-white">Hindi Dub is currently unavailable for this episode.</h3>
+                  <p className="text-xs text-[#9E9EB2] max-w-md mx-auto">
+                    This episode has not been dubbed or released in Hindi yet. You can enjoy this episode in Japanese Sub or English Dub.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+                  <button
+                    onClick={() => handleAudioSwitch('sub')}
+                    className="px-4 py-2 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>🇯🇵</span>
+                    <span>Switch to Japanese Sub</span>
+                  </button>
+                  <button
+                    onClick={() => handleAudioSwitch('dub')}
+                    className="px-4 py-2 rounded-xl bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 border border-blue-500/40 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <span>🇬🇧</span>
+                    <span>Switch to English Dub</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Video Meta & Controls Strip */}
             <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-lg space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -422,7 +446,7 @@ export const WatchPage: React.FC = () => {
                 </div>
 
                 {/* Sub / Dub / Hindi Audio Selector & Nav buttons */}
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <div className="flex p-0.5 rounded-lg bg-[#1C1C26] border border-white/10 shadow-inner">
                     <button
                       onClick={() => handleAudioSwitch('sub')}
@@ -513,14 +537,20 @@ export const WatchPage: React.FC = () => {
               {/* Streaming Server Switcher */}
               <div className="pt-3 border-t border-white/[0.06] flex flex-wrap items-center gap-2">
                 <span className="text-xs text-[#9E9EB2] font-semibold flex items-center gap-1.5 mr-1">
-                  <Server className="w-3.5 h-3.5 text-[#F01428]" /> Server:
+                  <Server className="w-3.5 h-3.5 text-[#F01428]" /> Stream:
                 </span>
-                {(streamData?.servers || [
-                  { id: 'kai-anilist', name: 'Server 1 (DevilMotion HD)' },
-                  { id: 'kai-hd', name: 'Server 2 (1080p Ultra HD)' },
-                  { id: 'alt-embed', name: 'Server 4 (Backup Mirror)' },
-                  { id: 'animeembed-direct', name: 'Server 5 (Rapid Stream)' },
-                ]).map((srv: any, idx: number) => (
+                {(streamData?.servers?.length ? streamData.servers : (
+                  audioTrack === 'hindi'
+                    ? [
+                        { id: 'hindi-main', name: 'Stream 1 (Hindi Direct)', whiteLabelName: 'Stream 1 (Hindi Direct)' },
+                        { id: 'hindi-backup', name: 'Stream 2 (Hindi Mirror)', whiteLabelName: 'Stream 2 (Hindi Mirror)' },
+                      ]
+                    : [
+                        { id: 'aniembed-ultra', name: 'Stream 1 (Ultra)', whiteLabelName: 'Stream 1 (Ultra)' },
+                        { id: 'animeembed-direct', name: 'Stream 2 (Rapid)', whiteLabelName: 'Stream 2 (Rapid)' },
+                        { id: 'alt-embed', name: 'Stream 3 (Mirror)', whiteLabelName: 'Stream 3 (Mirror)' },
+                      ]
+                )).map((srv: any, idx: number) => (
                   <button
                     key={srv.id}
                     onClick={() => handleServerSwitch(srv.id)}
@@ -542,6 +572,12 @@ export const WatchPage: React.FC = () => {
                 </div>
               </div>
             </div>
+
+            {/* Gen-Z Community Comments Section */}
+            <GenZCommentsSection
+              animeId={anime.id || anime.anilistId}
+              episodeNumber={currentEpNum}
+            />
           </div>
 
           {/* Right Sidebar: Episode Selector & Playlist */}

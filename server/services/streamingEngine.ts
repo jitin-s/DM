@@ -8,7 +8,7 @@ export interface StreamSourceOption {
   id: string;
   name: string; // Internal name
   whiteLabelName: string; // Public DevilMotion white-label name
-  providerId: 'vidwave-kai' | 'vidwave-hindi' | 'animeembed' | 'megaplay' | 'anikoto';
+  providerId: 'aniembed' | 'animeembed' | 'vidwave-kai' | 'vidwave-hindi' | 'megaplay' | 'anikoto';
   embedUrl: string;
   audio: StreamingAudio;
   isDefault?: boolean;
@@ -73,16 +73,16 @@ function getProviderPenalty(serverId: string): number {
 }
 
 // -------------------------------------------------------------
-// Adapter 1: VidWave Anime Kai (Sub & Dub via AniList & MAL)
+// Adapter 1: AniEmbed (https://aniembed.se/ - Priority 1 Default Primary)
+// Embed: https://aniembed.se/e/{ANILIST_ID}/{EPISODE}?lang={sub|dub}&autoplay=0&t={SECONDS}
 // -------------------------------------------------------------
-class VidWaveKaiAdapter implements StreamingProviderAdapter {
-  id = 'vidwave-kai';
-  name = 'VidWave Anime Kai';
+class AniEmbedAdapter implements StreamingProviderAdapter {
+  id = 'aniembed';
+  name = 'AniEmbed';
 
   async getSupportedLanguages(anilistId: number, animeRecord?: any): Promise<StreamingAudio[]> {
     const audios: StreamingAudio[] = ['sub'];
-    const format = animeRecord?.format;
-    if (format !== 'MUSIC') {
+    if (animeRecord?.format !== 'MUSIC') {
       audios.push('dub');
     }
     return audios;
@@ -95,7 +95,7 @@ class VidWaveKaiAdapter implements StreamingProviderAdapter {
     audio: StreamingAudio;
   }): Promise<boolean> {
     if (params.audio === 'hindi') return false;
-    return params.episode >= 1 && params.anilistId > 0;
+    return params.episode >= 1 && (params.anilistId > 0 || Boolean(params.malId && params.malId > 0));
   }
 
   async getSources(params: {
@@ -107,130 +107,47 @@ class VidWaveKaiAdapter implements StreamingProviderAdapter {
     autoplay?: boolean;
     autoNext?: boolean;
   }): Promise<StreamSourceOption[]> {
-    const { anilistId, malId, episode, audio, time = 0, autoplay = true, autoNext = true } = params;
+    const { anilistId, malId, episode, audio, time = 0 } = params;
     if (audio === 'hindi') return [];
 
-    const kaiAudio = audio === 'dub' ? 'dub' : 'sub';
-    const query = new URLSearchParams();
-    if (autoplay) query.set('autoplay', '1');
-    if (autoNext) query.set('autonext', '1');
-    query.set('skipSec', '85');
-    if (time > 0) query.set('t', Math.floor(time).toString());
+    const lang = audio === 'dub' ? 'dub' : 'sub';
+    const timeParam = time > 0 ? `&t=${Math.floor(time)}` : '';
+    const idSegment = anilistId > 0 ? `${anilistId}` : (malId ? `mal/${malId}` : '');
+    if (!idSegment) return [];
 
-    const qs = query.toString();
-    const sources: StreamSourceOption[] = [];
+    const embedUrl = `https://aniembed.se/e/${idSegment}/${episode}?lang=${lang}&autoplay=0${timeParam}`;
 
-    // Server 1: AniList Direct Auto
-    sources.push({
-      id: 'kai-anilist',
-      name: 'VidWave Kai (AniList Direct - Auto)',
-      whiteLabelName: 'Server 1 (DevilMotion HD)',
-      providerId: 'vidwave-kai',
-      embedUrl: `${VIDWAVE_EMBED_HOST}/kai/anilist/${anilistId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ''}`,
-      audio,
-      isDefault: true,
-      priority: 10 - getProviderPenalty('kai-anilist'),
-      quality: 'auto',
-      iframeOptions: {
-        allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-        referrerPolicy: 'strict-origin-when-cross-origin',
-      },
-      eventSpec: {
-        originMatches: ['vidwave.sbs', 'vidwave.site'],
-        readyEvent: 'ready',
-        playEvent: 'play',
-        pauseEvent: 'pause',
-        errorEvent: 'error',
-        timeEvent: 'time',
-        completeEvent: 'complete',
-      },
-    });
-
-    // Server 2: 1080p Ultra HD
-    const hdQuery = new URLSearchParams(query);
-    hdQuery.set('q', '1080');
-    sources.push({
-      id: 'kai-hd',
-      name: 'VidWave Kai (1080p Ultra HD)',
-      whiteLabelName: 'Server 2 (1080p Ultra HD)',
-      providerId: 'vidwave-kai',
-      embedUrl: `${VIDWAVE_EMBED_HOST}/kai/anilist/${anilistId}/${episode}/${kaiAudio}?${hdQuery.toString()}`,
-      audio,
-      priority: 9 - getProviderPenalty('kai-hd'),
-      quality: '1080p',
-      iframeOptions: {
-        allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-        referrerPolicy: 'strict-origin-when-cross-origin',
-      },
-      eventSpec: {
-        originMatches: ['vidwave.sbs', 'vidwave.site'],
-        readyEvent: 'ready',
-        playEvent: 'play',
-        pauseEvent: 'pause',
-        errorEvent: 'error',
-        timeEvent: 'time',
-        completeEvent: 'complete',
-      },
-    });
-
-    // Server 3: MAL Direct (when MAL ID is available)
-    if (malId && malId > 0) {
-      sources.push({
-        id: 'kai-mal',
-        name: 'VidWave Kai (MAL Direct)',
-        whiteLabelName: 'Server 3 (Direct Stream)',
-        providerId: 'vidwave-kai',
-        embedUrl: `${VIDWAVE_EMBED_HOST}/kai/mal/${malId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ''}`,
+    return [
+      {
+        id: 'aniembed-ultra',
+        name: 'AniEmbed Ultra HD',
+        whiteLabelName: 'Stream 1 (Ultra)',
+        providerId: 'aniembed',
+        embedUrl,
         audio,
-        priority: 8 - getProviderPenalty('kai-mal'),
-        quality: 'auto',
+        isDefault: true,
+        priority: 10 - getProviderPenalty('aniembed-ultra'),
+        quality: '1080p',
         iframeOptions: {
           allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
           referrerPolicy: 'strict-origin-when-cross-origin',
         },
         eventSpec: {
-          originMatches: ['vidwave.sbs', 'vidwave.site'],
+          originMatches: ['aniembed.se'],
           readyEvent: 'ready',
           playEvent: 'play',
           pauseEvent: 'pause',
           errorEvent: 'error',
-          timeEvent: 'time',
-          completeEvent: 'complete',
+          timeEvent: 'progress',
+          completeEvent: 'ended',
         },
-      });
-    }
-
-    // Server 4: Alternative Host Mirror
-    sources.push({
-      id: 'alt-embed',
-      name: 'VidWave Alternative Stream (Mirror)',
-      whiteLabelName: 'Server 4 (Backup Mirror)',
-      providerId: 'vidwave-kai',
-      embedUrl: `${VIDWAVE_ALT_HOST}/kai/anilist/${anilistId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ''}`,
-      audio,
-      priority: 6 - getProviderPenalty('alt-embed'),
-      quality: 'auto',
-      iframeOptions: {
-        allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-        referrerPolicy: 'strict-origin-when-cross-origin',
       },
-      eventSpec: {
-        originMatches: ['vidwave.sbs', 'vidwave.site'],
-        readyEvent: 'ready',
-        playEvent: 'play',
-        pauseEvent: 'pause',
-        errorEvent: 'error',
-        timeEvent: 'time',
-        completeEvent: 'complete',
-      },
-    });
-
-    return sources;
+    ];
   }
 }
 
 // -------------------------------------------------------------
-// Adapter 2: AnimeEmbed (https://animeembed.com/#documentation)
+// Adapter 2: AnimeEmbed (https://animeembed.com/#documentation - Priority 2 Secondary)
 // Embed: https://animeembed.com/embed/ani/{ANILIST_ID}/{EPISODE}?track={sub|dub}
 // -------------------------------------------------------------
 class AnimeEmbedAdapter implements StreamingProviderAdapter {
@@ -280,11 +197,11 @@ class AnimeEmbedAdapter implements StreamingProviderAdapter {
       {
         id: 'animeembed-direct',
         name: 'AnimeEmbed Rapid Stream',
-        whiteLabelName: 'Server 5 (Rapid Stream)',
+        whiteLabelName: 'Stream 2 (Rapid)',
         providerId: 'animeembed',
         embedUrl,
         audio,
-        priority: 7 - getProviderPenalty('animeembed-direct'),
+        priority: 8 - getProviderPenalty('animeembed-direct'),
         quality: 'auto',
         iframeOptions: {
           allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
@@ -305,7 +222,110 @@ class AnimeEmbedAdapter implements StreamingProviderAdapter {
 }
 
 // -------------------------------------------------------------
-// Adapter 3: VidWave Hindi Anime (Dedicated Hindi Dubbed Stream)
+// Adapter 3: VidWave Alternative Mirror (Priority 3 Mirror Backup)
+// -------------------------------------------------------------
+class VidWaveAltAdapter implements StreamingProviderAdapter {
+  id = 'vidwave-alt';
+  name = 'VidWave Mirror Stream';
+
+  async getSupportedLanguages(anilistId: number, animeRecord?: any): Promise<StreamingAudio[]> {
+    const audios: StreamingAudio[] = ['sub'];
+    if (animeRecord?.format !== 'MUSIC') {
+      audios.push('dub');
+    }
+    return audios;
+  }
+
+  async checkAvailability(params: {
+    anilistId: number;
+    malId?: number | null;
+    episode: number;
+    audio: StreamingAudio;
+  }): Promise<boolean> {
+    if (params.audio === 'hindi') return false;
+    return params.episode >= 1 && params.anilistId > 0;
+  }
+
+  async getSources(params: {
+    anilistId: number;
+    malId?: number | null;
+    episode: number;
+    audio: StreamingAudio;
+    time?: number;
+    autoplay?: boolean;
+    autoNext?: boolean;
+  }): Promise<StreamSourceOption[]> {
+    const { anilistId, malId, episode, audio, time = 0, autoplay = true, autoNext = true } = params;
+    if (audio === 'hindi') return [];
+
+    const kaiAudio = audio === 'dub' ? 'dub' : 'sub';
+    const query = new URLSearchParams();
+    if (autoplay) query.set('autoplay', '1');
+    if (autoNext) query.set('autonext', '1');
+    query.set('skipSec', '85');
+    if (time > 0) query.set('t', Math.floor(time).toString());
+
+    const qs = query.toString();
+    const sources: StreamSourceOption[] = [];
+
+    // Alternative Mirror Host
+    sources.push({
+      id: 'alt-embed',
+      name: 'VidWave Alternative Stream (Mirror)',
+      whiteLabelName: 'Stream 3 (Mirror)',
+      providerId: 'vidwave-kai',
+      embedUrl: `${VIDWAVE_ALT_HOST}/kai/anilist/${anilistId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ''}`,
+      audio,
+      priority: 6 - getProviderPenalty('alt-embed'),
+      quality: 'auto',
+      iframeOptions: {
+        allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+        referrerPolicy: 'strict-origin-when-cross-origin',
+      },
+      eventSpec: {
+        originMatches: ['vidwave.sbs', 'vidwave.site'],
+        readyEvent: 'ready',
+        playEvent: 'play',
+        pauseEvent: 'pause',
+        errorEvent: 'error',
+        timeEvent: 'time',
+        completeEvent: 'complete',
+      },
+    });
+
+    // MAL Direct Backup if MAL ID available
+    if (malId && malId > 0) {
+      sources.push({
+        id: 'kai-mal',
+        name: 'VidWave Direct (MAL)',
+        whiteLabelName: 'Stream 4 (Direct Mirror)',
+        providerId: 'vidwave-kai',
+        embedUrl: `${VIDWAVE_EMBED_HOST}/kai/mal/${malId}/${episode}/${kaiAudio}${qs ? `?${qs}` : ''}`,
+        audio,
+        priority: 5 - getProviderPenalty('kai-mal'),
+        quality: 'auto',
+        iframeOptions: {
+          allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+          referrerPolicy: 'strict-origin-when-cross-origin',
+        },
+        eventSpec: {
+          originMatches: ['vidwave.sbs', 'vidwave.site'],
+          readyEvent: 'ready',
+          playEvent: 'play',
+          pauseEvent: 'pause',
+          errorEvent: 'error',
+          timeEvent: 'time',
+          completeEvent: 'complete',
+        },
+      });
+    }
+
+    return sources;
+  }
+}
+
+// -------------------------------------------------------------
+// Adapter 4: VidWave Hindi Anime (Dedicated Hindi Dubbed Stream)
 // -------------------------------------------------------------
 class VidWaveHindiAdapter implements StreamingProviderAdapter {
   id = 'vidwave-hindi';
@@ -369,7 +389,7 @@ class VidWaveHindiAdapter implements StreamingProviderAdapter {
       {
         id: 'hindi-main',
         name: 'VidWave Hindi (Main Server)',
-        whiteLabelName: 'Server 1 (DevilMotion Hindi)',
+        whiteLabelName: 'Stream 1 (Hindi Direct)',
         providerId: 'vidwave-hindi',
         embedUrl: `${VIDWAVE_EMBED_HOST}/anime/hindi/${anilistId}/${episode}?${query.toString()}`,
         audio: 'hindi',
@@ -393,7 +413,7 @@ class VidWaveHindiAdapter implements StreamingProviderAdapter {
       {
         id: 'hindi-backup',
         name: 'VidWave Hindi (Fast Mirror)',
-        whiteLabelName: 'Server 2 (Hindi Fast Mirror)',
+        whiteLabelName: 'Stream 2 (Hindi Mirror)',
         providerId: 'vidwave-hindi',
         embedUrl: `${VIDWAVE_EMBED_HOST}/anime/hindi/${anilistId}/${episode}?server=main&autoplay=1&autoSkipIntro=1&skipSec=85`,
         audio: 'hindi',
@@ -418,7 +438,7 @@ class VidWaveHindiAdapter implements StreamingProviderAdapter {
 }
 
 // -------------------------------------------------------------
-// Adapter 4: MegaPlay / Anikoto Backup Providers
+// Adapter 5: MegaPlay Backup Provider
 // -------------------------------------------------------------
 class MegaPlayAdapter implements StreamingProviderAdapter {
   id = 'megaplay';
@@ -444,11 +464,11 @@ class MegaPlayAdapter implements StreamingProviderAdapter {
       {
         id: 'megaplay-prime',
         name: 'MegaPlay Prime',
-        whiteLabelName: 'Server 6 (DevilMotion Prime)',
+        whiteLabelName: 'Stream 5 (Backup)',
         providerId: 'megaplay',
         embedUrl: `https://megaplay.buzz/stream?id=${anilistId}&ep=${episode}&lang=${audio}`,
         audio,
-        priority: 3 - getProviderPenalty('megaplay-prime'),
+        priority: 2 - getProviderPenalty('megaplay-prime'),
         quality: 'auto',
         iframeOptions: {
           allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
@@ -473,8 +493,9 @@ class MegaPlayAdapter implements StreamingProviderAdapter {
 // -------------------------------------------------------------
 export class StreamingEngine {
   private static adapters: StreamingProviderAdapter[] = [
-    new VidWaveKaiAdapter(),
+    new AniEmbedAdapter(),
     new AnimeEmbedAdapter(),
+    new VidWaveAltAdapter(),
     new VidWaveHindiAdapter(),
     new MegaPlayAdapter(),
   ];
@@ -567,6 +588,7 @@ export class StreamingEngine {
     currentServer: string;
     servers: StreamSourceOption[];
     iframeOptions: StreamSourceOption['iframeOptions'];
+    message?: string;
     metadata: {
       anilistId: number;
       malId: number | null;
@@ -606,10 +628,31 @@ export class StreamingEngine {
       episode: episodeNumber,
     });
 
-    let activeAudio = audio;
-    if (activeAudio === 'hindi' && !langInfo.availableAudios.includes('hindi')) {
-      activeAudio = 'sub';
+    // If Hindi audio is explicitly selected but unavailable, never silently revert to Sub
+    if (audio === 'hindi' && !langInfo.availableAudios.includes('hindi')) {
+      return {
+        available: false,
+        embedUrl: '',
+        provider: 'DevilMotion Hindi Stream',
+        audio: 'hindi',
+        availableAudios: langInfo.availableAudios,
+        currentServer: '',
+        servers: [],
+        message: 'Hindi Dub is currently unavailable for this episode.',
+        iframeOptions: {
+          allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+          referrerPolicy: 'strict-origin-when-cross-origin',
+        },
+        metadata: {
+          anilistId: resolvedAnilistId,
+          malId: resolvedMalId,
+          episodeNumber,
+          title: animeRecord?.titleEnglish || animeRecord?.titleRomaji || 'Anime',
+        },
+      };
     }
+
+    const activeAudio = audio;
 
     // Query all matching adapters for sources concurrently
     const allSourcePromises = this.adapters.map(adapter =>
@@ -627,46 +670,21 @@ export class StreamingEngine {
     const sourceArrays = await Promise.all(allSourcePromises);
     const flattenedSources = sourceArrays.flat();
 
-    // Sort by dynamic priority (higher priority first)
+    // Sort by dynamic priority (higher priority first: AniEmbed > AnimeEmbed > VidWave)
     flattenedSources.sort((a, b) => b.priority - a.priority);
 
     if (flattenedSources.length === 0) {
-      // Direct emergency fallback
-      const fallbackUrl = activeAudio === 'hindi'
-        ? `${VIDWAVE_EMBED_HOST}/anime/hindi/${resolvedAnilistId}/${episodeNumber}?server=main&autoplay=1`
-        : `${VIDWAVE_EMBED_HOST}/kai/anilist/${resolvedAnilistId}/${episodeNumber}/${activeAudio}?autoplay=1`;
-
       return {
-        available: true,
-        embedUrl: fallbackUrl,
-        provider: 'DevilMotion Auto Stream',
+        available: false,
+        embedUrl: '',
+        provider: 'DevilMotion Stream',
         audio: activeAudio,
         availableAudios: langInfo.availableAudios,
-        currentServer: 'kai-anilist',
-        servers: [
-          {
-            id: 'kai-anilist',
-            name: 'DevilMotion HD (Auto)',
-            whiteLabelName: 'Server 1 (DevilMotion HD)',
-            providerId: 'vidwave-kai',
-            embedUrl: fallbackUrl,
-            audio: activeAudio,
-            priority: 10,
-            iframeOptions: {
-              allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
-              referrerPolicy: 'strict-origin-when-cross-origin',
-            },
-            eventSpec: {
-              originMatches: ['vidwave.sbs', 'vidwave.site'],
-              readyEvent: 'ready',
-              playEvent: 'play',
-              pauseEvent: 'pause',
-              errorEvent: 'error',
-              timeEvent: 'time',
-              completeEvent: 'complete',
-            },
-          },
-        ],
+        currentServer: '',
+        servers: [],
+        message: activeAudio === 'hindi'
+          ? 'Hindi Dub is currently unavailable for this episode.'
+          : 'No working stream is currently available for this episode.',
         iframeOptions: {
           allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
           referrerPolicy: 'strict-origin-when-cross-origin',

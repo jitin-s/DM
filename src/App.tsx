@@ -131,30 +131,9 @@ export const App: React.FC = () => {
                   </Suspense>
                 }
               />
-              <Route
-                path="login"
-                element={
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <LoginPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="register"
-                element={
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <RegisterPage />
-                  </Suspense>
-                }
-              />
-              <Route
-                path="profile"
-                element={
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <ProfilePage />
-                  </Suspense>
-                }
-              />
+              <Route path="login" element={<Navigate to="/" replace />} />
+              <Route path="register" element={<Navigate to="/" replace />} />
+              <Route path="profile" element={<Navigate to="/" replace />} />
               <Route
                 path="admin"
                 element={

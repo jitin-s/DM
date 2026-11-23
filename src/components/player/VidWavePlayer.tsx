@@ -65,16 +65,16 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
     setIframeLoaded(false);
   }, [embedUrl]);
 
-  // Watchdog timer: if stream takes >14 seconds to load or initialize, prompt failover
+  // Watchdog timer: if stream takes >8 seconds to load or initialize, prompt failover
   useEffect(() => {
     if (isPlaying && embedUrl && !iframeLoaded) {
       if (watchdogTimerRef.current) clearTimeout(watchdogTimerRef.current);
       watchdogTimerRef.current = setTimeout(() => {
         if (!iframeLoaded) {
-          setStatusNotification('Stream is taking longer than expected. Finding another source...');
-          onError?.('Stream initialization timeout. Switching to another available server...');
+          setStatusNotification('Finding another working stream...');
+          onError?.('Stream initialization timeout. Switching to another available stream...');
         }
-      }, 14000);
+      }, 8000);
     }
 
     return () => {
@@ -89,25 +89,67 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
       const origin = event.origin || '';
-      // Validate origin against authorized providers: VidWave, AnimeEmbed, MegaPlay
-      const isVidWave = origin.includes('vidwave.sbs') || origin.includes('vidwave.site');
+      // Validate origin against authorized providers: AniEmbed, AnimeEmbed, VidWave, MegaPlay
+      const isAniEmbed = origin.includes('aniembed.se');
       const isAnimeEmbed = origin.includes('animeembed.com');
+      const isVidWave = origin.includes('vidwave.sbs') || origin.includes('vidwave.site');
       const isMegaPlay = origin.includes('megaplay.buzz');
 
-      if (!isVidWave && !isAnimeEmbed && !isMegaPlay) {
+      if (!isAniEmbed && !isAnimeEmbed && !isVidWave && !isMegaPlay) {
         return;
       }
 
       const data = event.data;
       if (!data) return;
 
-      // Clear watchdog timer once events arrive
+      // Clear watchdog timer once player events arrive
       if (watchdogTimerRef.current) {
         clearTimeout(watchdogTimerRef.current);
         watchdogTimerRef.current = null;
       }
 
-      // --- 1. VidWave Events ---
+      // --- 1. AniEmbed Events (https://aniembed.se/) ---
+      if (isAniEmbed) {
+        const eventName = data.name || data.event || data.type;
+        if (eventName === 'ready') {
+          setIframeLoaded(true);
+          setStatusNotification('Your stream is ready.');
+          setTimeout(() => setStatusNotification(null), 3000);
+        } else if (eventName === 'progress' || eventName === 'time') {
+          const payload = data.data || data;
+          const currentTime = typeof payload.time === 'number' ? payload.time : (typeof payload.currentTime === 'number' ? payload.currentTime : 0);
+          const duration = typeof payload.duration === 'number' ? payload.duration : 0;
+          const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+          onTimeUpdate?.(currentTime, duration, percent);
+        } else if (eventName === 'ended') {
+          onComplete?.();
+        } else if (eventName === 'error') {
+          setStatusNotification('Finding another working stream...');
+          onError?.(data.message || 'Stream playback error');
+        }
+      }
+
+      // --- 2. AnimeEmbed Events (https://animeembed.com/#documentation) ---
+      if (isAnimeEmbed) {
+        const eventType = data.event || data.type;
+        if (eventType === 'ready') {
+          setIframeLoaded(true);
+          setStatusNotification('Your stream is ready.');
+          setTimeout(() => setStatusNotification(null), 3000);
+        } else if (eventType === 'progress' || eventType === 'time') {
+          const currentTime = typeof data.currentTime === 'number' ? data.currentTime : (typeof data.time === 'number' ? data.time : 0);
+          const duration = typeof data.duration === 'number' ? data.duration : 0;
+          const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
+          onTimeUpdate?.(currentTime, duration, percent);
+        } else if (eventType === 'ended') {
+          onComplete?.();
+        } else if (eventType === 'error') {
+          setStatusNotification('Finding another working stream...');
+          onError?.(data.message || 'AnimeEmbed stream error');
+        }
+      }
+
+      // --- 3. VidWave Events ---
       if (isVidWave) {
         if (data.event === 'time') {
           const currentTime = typeof data.time === 'number' ? data.time : 0;
@@ -128,30 +170,12 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
           onSkipIntro?.();
           setTimeout(() => setSkipNotification(null), 3500);
         } else if (data.event === 'error') {
+          setStatusNotification('Finding another working stream...');
           onError?.(data.message || 'Stream playback error');
         }
       }
 
-      // --- 2. AnimeEmbed Events (Documented at animeembed.com/#documentation) ---
-      if (isAnimeEmbed) {
-        const eventType = data.event || data.type;
-        if (eventType === 'ready') {
-          setIframeLoaded(true);
-          setStatusNotification('Your stream is ready.');
-          setTimeout(() => setStatusNotification(null), 3000);
-        } else if (eventType === 'progress' || eventType === 'time') {
-          const currentTime = typeof data.currentTime === 'number' ? data.currentTime : (typeof data.time === 'number' ? data.time : 0);
-          const duration = typeof data.duration === 'number' ? data.duration : 0;
-          const percent = duration > 0 ? (currentTime / duration) * 100 : 0;
-          onTimeUpdate?.(currentTime, duration, percent);
-        } else if (eventType === 'ended') {
-          onComplete?.();
-        } else if (eventType === 'error') {
-          onError?.(data.message || 'AnimeEmbed stream error');
-        }
-      }
-
-      // --- 3. MegaPlay Events ---
+      // --- 4. MegaPlay Events ---
       if (isMegaPlay) {
         if (data.event === 'time') {
           const currentTime = typeof data.time === 'number' ? data.time : 0;
@@ -205,9 +229,9 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
               <Loader2 className="w-9 h-9 text-[#F01428] animate-spin mb-3" />
               <div className="text-center space-y-1">
                 <p className="text-sm text-white font-semibold">
-                  {streamingState === 'CHECKING' && 'Checking available streaming sources...'}
+                  {streamingState === 'CHECKING' && 'Finding available streams...'}
                   {streamingState === 'INITIALIZING' && 'Initializing stream player...'}
-                  {streamingState === 'SWITCHING_SOURCE' && 'Switching to backup stream node...'}
+                  {streamingState === 'SWITCHING_SOURCE' && 'Finding another working stream...'}
                   {(!streamingState || streamingState === 'IDLE' || streamingState === 'READY') && 'Connecting to DevilMotion Player...'}
                 </p>
                 <p className="text-xs text-[#9E9EB2]">Verifying selected audio and optimizing bandwidth...</p>

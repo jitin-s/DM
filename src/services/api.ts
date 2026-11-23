@@ -315,31 +315,56 @@ export const api = {
       if (!res.ok) throw new Error('Stream lookup failed');
       return await res.json();
     } catch (err: any) {
-      // Fallback direct to VidWave
       const isHindi = audio === 'hindi';
       const anilistId = parseInt(animeId, 10) || 16498;
-      const fallbackUrl = isHindi
-        ? `https://embed.vidwave.sbs/anime/hindi/${anilistId}/${episodeNumber}?server=main&autoplay=1&autoSkipIntro=1&skipSec=85`
-        : `https://embed.vidwave.sbs/kai/anilist/${anilistId}/${episodeNumber}/${audio}?autoplay=1&autonext=1&skipSec=85`;
+
+      if (isHindi) {
+        return {
+          stream: {
+            available: false,
+            embedUrl: '',
+            provider: 'DevilMotion Hindi Stream',
+            audio,
+            availableAudios: ['sub', 'dub'],
+            currentServer: '',
+            servers: [],
+            message: 'Hindi Dub is currently unavailable for this episode.',
+            iframeOptions: {
+              allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+              referrerPolicy: 'strict-origin-when-cross-origin',
+            },
+            metadata: {
+              anilistId,
+              malId: null,
+              episodeNumber,
+            },
+          },
+          servers: [],
+          iframeOptions: {
+            allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
+            referrerPolicy: 'strict-origin-when-cross-origin',
+          },
+        };
+      }
+
+      // Safe fallback prioritizing AniEmbed (Stream 1) and AnimeEmbed (Stream 2)
+      const aniEmbedUrl = `https://aniembed.se/e/${anilistId}/${episodeNumber}?lang=${audio}&autoplay=0`;
+      const animeEmbedUrl = `https://animeembed.com/embed/ani/${anilistId}/${episodeNumber}?track=${audio}&autoPlay=0&autoSkip=1`;
+
+      const safeServers = [
+        { id: 'aniembed-ultra', name: 'Stream 1 (Ultra)', whiteLabelName: 'Stream 1 (Ultra)', priority: 10, isDefault: true },
+        { id: 'animeembed-direct', name: 'Stream 2 (Rapid)', whiteLabelName: 'Stream 2 (Rapid)', priority: 8 },
+      ];
 
       return {
         stream: {
           available: true,
-          embedUrl: fallbackUrl,
-          provider: isHindi ? 'DevilMotion Hindi Player' : 'DevilMotion Player',
+          embedUrl: aniEmbedUrl,
+          provider: 'Stream 1 (Ultra)',
           audio,
-          availableAudios: isHindi ? ['sub', 'dub', 'hindi'] : ['sub', 'dub'],
-          currentServer: isHindi ? 'hindi-main' : 'kai-anilist',
-          servers: isHindi
-            ? [
-                { id: 'hindi-main', name: 'DevilMotion Hindi Server 1', provider: 'HINDI', isDefault: true },
-                { id: 'hindi-backup', name: 'DevilMotion Hindi Mirror', provider: 'HINDI' },
-              ]
-            : [
-                { id: 'kai-anilist', name: 'DevilMotion HD (Auto)', provider: 'KAI', isDefault: true },
-                { id: 'kai-hd', name: 'DevilMotion 1080p Ultra HD', provider: 'KAI' },
-                { id: 'alt-embed', name: 'DevilMotion Alternative Stream (Mirror)', provider: 'KAI' },
-              ],
+          availableAudios: ['sub', 'dub'],
+          currentServer: 'aniembed-ultra',
+          servers: safeServers,
           iframeOptions: {
             allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
             referrerPolicy: 'strict-origin-when-cross-origin',
@@ -350,15 +375,7 @@ export const api = {
             episodeNumber,
           },
         },
-        servers: isHindi
-          ? [
-              { id: 'hindi-main', name: 'DevilMotion Hindi Server 1', provider: 'HINDI' },
-              { id: 'hindi-backup', name: 'DevilMotion Hindi Mirror', provider: 'HINDI' },
-            ]
-          : [
-              { id: 'kai-anilist', name: 'DevilMotion HD (Auto)', provider: 'KAI' },
-              { id: 'kai-hd', name: 'DevilMotion 1080p Ultra HD', provider: 'KAI' },
-            ],
+        servers: safeServers,
         iframeOptions: {
           allow: 'fullscreen; accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture',
           referrerPolicy: 'strict-origin-when-cross-origin',
