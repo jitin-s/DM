@@ -12,6 +12,7 @@
     "prisma:push": "prisma db push",
     "build": "prisma generate && tsc -b && vite build",
     "vercel-build": "prisma generate && tsc -b && vite build",
+    "postinstall": "prisma generate",
     "lint": "oxlint",
     "preview": "vite preview"
   },
