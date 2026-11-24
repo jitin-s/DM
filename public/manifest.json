@@ -4,7 +4,7 @@
   "description": "Stream trending, popular, and scheduled anime releases in high definition.",
   "icons": [
     {
-      "src": "/logo_cropped.png",
+      "src": "/favicon.png",
       "type": "image/png",
       "sizes": "192x192 512x512"
     }
