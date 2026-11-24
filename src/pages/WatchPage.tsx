@@ -13,6 +13,7 @@ import {
   Volume2,
   Globe2,
   Layers,
+  ExternalLink,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useWatchlist } from '../context/WatchlistContext';
@@ -625,6 +626,19 @@ export const WatchPage: React.FC = () => {
                     <span>{formatServerLabel(srv, idx)}</span>
                   </button>
                 ))}
+
+                {/* Monetag Direct Link Ad - VIP Ultra Stream */}
+                <a
+                  href="https://uplcm.com/4/12340281"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs px-3 py-1.5 rounded-lg border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-[#F01428]/20 hover:from-amber-500/20 hover:to-[#F01428]/30 text-amber-300 font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm shadow-amber-500/10"
+                  title="Direct VIP High-Speed Mirror (Sponsored)"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                  <span>⚡ Ultra Mirror (VIP)</span>
+                  <ExternalLink className="w-3 h-3 text-amber-400" />
+                </a>
 
                 {/* Audio Track Tag indicator */}
                 <div className="ml-auto hidden md:flex items-center gap-1.5 text-xs text-[#9E9EB2]">
