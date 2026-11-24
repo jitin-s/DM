@@ -107,3 +107,42 @@
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+@keyframes reverse-spin {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+
+.animate-reverse-spin {
+  animation: reverse-spin 10s linear infinite;
+}
+
+@keyframes demon-pulse {
+  0%, 100% {
+    opacity: 0.92;
+    transform: scale(1);
+    filter: drop-shadow(0 0 15px rgba(240, 20, 40, 0.4));
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 28px rgba(240, 20, 40, 0.75));
+  }
+}
+
+.animate-demon-pulse {
+  animation: demon-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes shimmer-bar {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-shimmer-bar {
+  animation: shimmer-bar 1.5s ease-in-out infinite;
+}

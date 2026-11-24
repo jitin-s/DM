@@ -5,7 +5,7 @@ import { Layout } from './components/layout/Layout';
 import { ScrollToTop } from './components/common/ScrollToTop';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { EmptyState } from './components/ui/EmptyState';
-import { Loader2 } from 'lucide-react';
+import { DemonPageLoader } from './components/common/DemonPageLoader';
 import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 
@@ -22,10 +22,7 @@ const WatchlistPage = lazy(() => import('./pages/WatchlistPage').then(m => ({ de
 const AdminPage = lazy(() => import('./pages/AdminPage').then(m => ({ default: m.AdminPage })));
 
 const PageLoadingFallback: React.FC = () => (
-  <div className="pt-40 pb-32 flex flex-col items-center justify-center text-center">
-    <Loader2 className="w-9 h-9 text-[#F01428] animate-spin mb-3" />
-    <span className="text-xs text-[#9E9EB2] font-semibold tracking-wide">Loading DevilMotion...</span>
-  </div>
+  <DemonPageLoader fullScreen={true} />
 );
 
 const NotFoundPage: React.FC = () => (
