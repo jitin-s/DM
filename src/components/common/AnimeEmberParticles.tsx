@@ -18,7 +18,7 @@ interface AnimeEmberParticlesProps {
 }
 
 export const AnimeEmberParticles: React.FC<AnimeEmberParticlesProps> = ({
-  count = 20,
+  count = 8,
   className = '',
 }) => {
   // Generate deterministic particles based on count
@@ -76,11 +76,12 @@ export const AnimeEmberParticles: React.FC<AnimeEmberParticlesProps> = ({
               width: `${p.size}px`,
               height: `${p.size}px`,
               backgroundColor: p.color,
-              boxShadow: `0 0 ${p.size * 2.5}px ${p.color}, 0 0 ${p.size * 5}px rgba(240, 20, 40, 0.5)`,
+              boxShadow: `0 0 ${p.size * 2}px ${p.color}`,
               animationDuration: p.duration,
               animationDelay: p.delay,
               '--drift-x': p.driftX,
               opacity: p.opacity,
+              willChange: 'transform, opacity',
             } as React.CSSProperties
           }
         />

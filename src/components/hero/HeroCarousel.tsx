@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Play, Info, Bookmark, BookmarkCheck, ChevronLeft, ChevronRight, Star, Flame } from 'lucide-react';
 import { AnimeItem } from '../../types/anime';
 import { useWatchlist } from '../../context/WatchlistContext';
+import { useNavigationLoading } from '../../context/NavigationLoadingContext';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { HeroSkeleton } from '../ui/Skeleton';
@@ -16,6 +17,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ items }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const { triggerLoading } = useNavigationLoading();
   const navigate = useNavigate();
 
   // Auto-advance carousel
@@ -70,8 +72,8 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ items }) => {
         {/* Subtle devil red atmospheric accent */}
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#F01428]/15 rounded-full blur-3xl pointer-events-none z-10" />
 
-        {/* Floating Demonic Embers Detailing */}
-        <AnimeEmberParticles count={24} className="opacity-75 z-15" />
+        {/* Floating Demonic Embers Detailing (Performance optimized) */}
+        <AnimeEmberParticles count={8} className="opacity-60 z-15" />
       </div>
 
       {/* Hero Content */}
@@ -132,13 +134,23 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ items }) => {
               variant="primary"
               size="lg"
               icon={<Play className="w-5 h-5 fill-white" />}
-              onClick={() => navigate(`/watch/${current.id}`)}
+              onClick={() => {
+                const title = current.title?.english || current.title?.romaji || 'Anime';
+                triggerLoading(`Summoning ${title}...`, 'Harmonizing high-speed streaming node...');
+                navigate(`/watch/${current.id}`);
+              }}
               className="glow-red"
             >
               Summon & Watch
             </Button>
 
-            <Link to={`/anime/${current.id}`}>
+            <Link
+              to={`/anime/${current.id}`}
+              onClick={() => {
+                const title = current.title?.english || current.title?.romaji || 'Anime';
+                triggerLoading(`Opening ${title}...`, 'Consulting complete archives in Ultra HD...');
+              }}
+            >
               <Button
                 variant="secondary"
                 size="lg"

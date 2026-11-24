@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { WatchlistProvider } from './context/WatchlistContext';
+import { NavigationLoadingProvider } from './context/NavigationLoadingContext';
 import { Layout } from './components/layout/Layout';
 import { ScrollToTop } from './components/common/ScrollToTop';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
@@ -42,17 +43,18 @@ export const App: React.FC = () => {
     <ErrorBoundary>
       <WatchlistProvider>
         <BrowserRouter>
-          <ScrollToTop />
-          <Routes>
-            <Route path="/" element={<Layout />}>
-              <Route
-                index
-                element={
-                  <Suspense fallback={<PageLoadingFallback />}>
-                    <HomePage />
-                  </Suspense>
-                }
-              />
+          <NavigationLoadingProvider>
+            <ScrollToTop />
+            <Routes>
+              <Route path="/" element={<Layout />}>
+                <Route
+                  index
+                  element={
+                    <Suspense fallback={<PageLoadingFallback />}>
+                      <HomePage />
+                    </Suspense>
+                  }
+                />
               <Route
                 path="anime"
                 element={
@@ -141,6 +143,7 @@ export const App: React.FC = () => {
           </Routes>
           <Analytics />
           <SpeedInsights />
+          </NavigationLoadingProvider>
         </BrowserRouter>
       </WatchlistProvider>
     </ErrorBoundary>

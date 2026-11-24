@@ -21,7 +21,8 @@ import { Badge } from '../components/ui/Badge';
 import { AnimeCard } from '../components/cards/AnimeCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { VidWavePlayer } from '../components/player/VidWavePlayer';
-import { AnimeEmberParticles } from '../components/common/AnimeEmberParticles';
+import { DemonPageLoader } from '../components/common/DemonPageLoader';
+import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
@@ -43,6 +44,7 @@ export const WatchPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const { isInWatchlist, toggleWatchlist, addToHistory } = useWatchlist();
+  const { triggerLoading, dismissLoading } = useNavigationLoading();
 
   const [anime, setAnime] = useState<any>(null);
   const [isAnimeLoading, setIsAnimeLoading] = useState(true);
@@ -101,6 +103,7 @@ export const WatchPage: React.FC = () => {
       })
       .finally(() => {
         setIsAnimeLoading(false);
+        dismissLoading();
       });
   }, [id]);
 
@@ -210,6 +213,7 @@ export const WatchPage: React.FC = () => {
       })
       .finally(() => {
         setIsStreamLoading(false);
+        dismissLoading();
       });
   }, [anime, currentEpNum, audioTrack, selectedServer]);
 
@@ -257,10 +261,12 @@ export const WatchPage: React.FC = () => {
 
   if (isAnimeLoading) {
     return (
-      <div className="pt-40 pb-32 flex flex-col items-center justify-center text-center">
-        <div className="w-10 h-10 border-4 border-[#F01428] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm text-[#9E9EB2]">Connecting to DevilMotion Streaming Node...</p>
-      </div>
+      <DemonPageLoader
+        fullScreen={true}
+        message="Entering DevilMotion Streaming Chamber..."
+        subMessage="Harmonizing high-speed video servers for zero-buffer playback..."
+        destination={`/watch/${id}`}
+      />
     );
   }
 
@@ -342,6 +348,7 @@ export const WatchPage: React.FC = () => {
 
   const handlePrevEp = () => {
     if (hasPrev) {
+      triggerLoading(`Switching to Episode ${currentEpNum - 1}...`, 'Harmonizing high-speed streaming node...');
       setIsStreamLoading(true);
       setStreamingState('CHECKING');
       setSearchParams({ ep: (currentEpNum - 1).toString() });
@@ -351,6 +358,7 @@ export const WatchPage: React.FC = () => {
 
   const handleNextEp = () => {
     if (hasNext) {
+      triggerLoading(`Switching to Episode ${currentEpNum + 1}...`, 'Harmonizing high-speed streaming node...');
       setIsStreamLoading(true);
       setStreamingState('CHECKING');
       setSearchParams({ ep: (currentEpNum + 1).toString() });
@@ -390,9 +398,6 @@ export const WatchPage: React.FC = () => {
         cinemaMode ? 'bg-[#040406]' : 'bg-[#08080A]'
       }`}
     >
-      {/* Ambient Demonic Embers in backdrop */}
-      {!cinemaMode && <AnimeEmberParticles count={14} className="opacity-30 fixed inset-0 pointer-events-none" />}
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center justify-between text-xs text-[#9E9EB2] mb-4">
@@ -742,11 +747,16 @@ export const WatchPage: React.FC = () => {
                   return (
                     <div
                       key={ep.id || ep.number}
+                      onMouseEnter={() => api.prefetchStream(anime?.id, ep.number, audioTrack)}
                       onClick={() => {
                         if (ep.number === currentEpNum) {
                           setIsPlaying(true);
                           return;
                         }
+                        triggerLoading(
+                          `Switching to Episode ${ep.number}...`,
+                          `Loading stream for ${ep.title || `Episode ${ep.number}`}...`
+                        );
                         setIsStreamLoading(true);
                         setStreamingState('CHECKING');
                         setSearchParams({ ep: ep.number.toString() });
@@ -767,7 +777,7 @@ export const WatchPage: React.FC = () => {
                         />
                         {isActive && (
                           <div className="absolute inset-0 bg-[#F01428]/40 flex items-center justify-center">
-                            <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping" />
+                            <span className="w-2.5 h-2.5 rounded-full bg-white shadow-[0_0_8px_#ffffff]" />
                           </div>
                         )}
                       </div>

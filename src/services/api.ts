@@ -311,9 +311,7 @@ export const api = {
       if (server) query.set('server', server);
       if (time && time > 0) query.set('time', Math.floor(time).toString());
 
-      const res = await fetchWithTimeout(`${API_BASE}/stream/${animeId}/${episodeNumber}?${query.toString()}`);
-      if (!res.ok) throw new Error('Stream lookup failed');
-      return await res.json();
+      return await cachedFetchJson<any>(`${API_BASE}/stream/${animeId}/${episodeNumber}?${query.toString()}`, 120);
     } catch (err: any) {
       const isHindi = audio === 'hindi';
       const anilistId = parseInt(animeId, 10) || 16498;
@@ -484,5 +482,16 @@ export const api = {
       body: JSON.stringify({ enabled }),
     });
     return await res.json();
+  },
+
+  // --- High-Speed Prefetching for Instant Navigation & Zero Click Latency ---
+  prefetchAnimeDetails(id: string | number): void {
+    if (!id) return;
+    this.getAnimeDetails(String(id)).catch(() => {});
+  },
+
+  prefetchStream(animeId: string | number, episodeNumber = 1, audio: 'sub' | 'dub' | 'hindi' = 'sub'): void {
+    if (!animeId) return;
+    this.getStream(String(animeId), episodeNumber, audio).catch(() => {});
   },
 };

@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Play, Clock } from 'lucide-react';
 import { AnimeEpisode } from '../../types/anime';
 import { Badge } from '../ui/Badge';
+import { useNavigationLoading } from '../../context/NavigationLoadingContext';
+import { api } from '../../services/api';
 
 interface EpisodeCardProps {
   animeId: string;
@@ -17,18 +19,30 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
   episode,
   isActive = false,
 }) => {
+  const { triggerLoading } = useNavigationLoading();
+
+  const handleClick = () => {
+    triggerLoading(
+      `Loading Episode ${episode.number}...`,
+      `Channeling ${animeTitle} in Ultra HD...`
+    );
+  };
+
+  const handleMouseEnter = () => {
+    api.prefetchStream(animeId, episode.number);
+  };
+
   return (
     <Link
       to={`/watch/${animeId}?ep=${episode.number}`}
-      className={`group relative flex flex-col rounded-xl overflow-hidden bg-[#15151C] border transition-all duration-300 ${
+      onClick={handleClick}
+      onMouseEnter={handleMouseEnter}
+      className={`group relative flex flex-col rounded-xl overflow-hidden bg-[#15151C] border transition-all duration-200 ${
         isActive
-          ? 'border-[#F01428] shadow-lg shadow-[#F01428]/30 bg-[#1C1C26] ring-1 ring-[#F01428]/50'
+          ? 'border-[#F01428] shadow-md shadow-[#F01428]/30 bg-[#1C1C26] ring-1 ring-[#F01428]/50'
           : 'border-white/[0.08] hover:border-white/20 hover:bg-[#1A1A22] hover:-translate-y-0.5'
       }`}
     >
-      {/* Anime Sheen on hover */}
-      <div className="card-sheen-sweep" />
-
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-black/40">
         <img

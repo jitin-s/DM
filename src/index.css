@@ -151,10 +151,10 @@
    DEVILMOTION PEAK ANIME DETAILING & DEMONIC REALM VISUAL FX
    ========================================================================== */
 
-/* 1. Floating Demonic Embers */
+/* 1. Floating Demonic Embers (Hardware Accelerated) */
 @keyframes ember-drift {
   0% {
-    transform: translateY(0) translateX(0) scale(0.7);
+    transform: translate3d(0, 0, 0) scale(0.7);
     opacity: 0;
   }
   20% {
@@ -164,7 +164,7 @@
     opacity: 0.55;
   }
   100% {
-    transform: translateY(-320px) translateX(var(--drift-x, 30px)) scale(1.2);
+    transform: translate3d(var(--drift-x, 30px), -300px, 0) scale(1.1);
     opacity: 0;
   }
 }
@@ -201,42 +201,19 @@
   animation: soundwave-3 0.85s ease-in-out infinite 0.3s;
 }
 
-/* 3. Holographic Anime Card Sheen */
-@keyframes card-sheen {
-  0% {
-    transform: translateX(-140%) rotate(25deg);
-    opacity: 0;
-  }
-  40% {
-    opacity: 0.3;
-  }
-  100% {
-    transform: translateX(260%) rotate(25deg);
-    opacity: 0;
-  }
-}
-
-.card-sheen-sweep {
+/* 3. Sleek Card Hover Highlight (Zero Composite Cost) */
+.anime-card-sheen::after {
+  content: '';
   position: absolute;
-  top: -50%;
-  left: -50%;
-  width: 200%;
-  height: 200%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.04) 40%,
-    rgba(255, 255, 255, 0.22) 50%,
-    rgba(240, 20, 40, 0.25) 55%,
-    transparent 70%
-  );
-  transform: translateX(-140%) rotate(25deg);
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.07) 0%, transparent 65%);
+  opacity: 0;
+  transition: opacity 0.25s ease-out;
   pointer-events: none;
-  z-index: 15;
 }
 
-.group:hover .card-sheen-sweep {
-  animation: card-sheen 1.1s ease-out forwards;
+.group:hover .anime-card-sheen::after {
+  opacity: 1;
 }
 
 /* 4. Demonic Ambient Aura Breathing */

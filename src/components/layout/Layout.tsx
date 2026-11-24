@@ -5,10 +5,12 @@ import { Footer } from '../footer/Footer';
 import { SearchModal } from '../search/SearchModal';
 import { TopProgressBar } from '../navigation/TopProgressBar';
 import { DemonPageLoader } from '../common/DemonPageLoader';
+import { useNavigationLoading } from '../../context/NavigationLoadingContext';
 
 export const Layout: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
+  const { isLoading: isNavLoading, loadingMessage, loadingSubMessage } = useNavigationLoading();
 
   const [isPageTransitioning, setIsPageTransitioning] = useState(false);
   const currentPathRef = useRef<string>(location.pathname + location.search);
@@ -41,10 +43,12 @@ export const Layout: React.FC = () => {
       <TopProgressBar />
       <Navbar onOpenSearch={() => setIsSearchOpen(true)} />
 
-      {/* Atmospheric Demon Realm Loading Page on Navigation */}
-      {isPageTransitioning && (
+      {/* Atmospheric Demon Realm Loading Page on Navigation or Click */}
+      {(isPageTransitioning || isNavLoading) && (
         <DemonPageLoader
           fullScreen={true}
+          message={isNavLoading ? loadingMessage : undefined}
+          subMessage={isNavLoading ? loadingSubMessage : undefined}
           destination={location.pathname + location.search}
         />
       )}

@@ -24,12 +24,15 @@ import { EpisodeCard } from '../components/cards/EpisodeCard';
 import { AnimeCard } from '../components/cards/AnimeCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { AnimeEmberParticles } from '../components/common/AnimeEmberParticles';
+import { DemonPageLoader } from '../components/common/DemonPageLoader';
+import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
 
 export const AnimeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
+  const { triggerLoading, dismissLoading } = useNavigationLoading();
   const [activeTab, setActiveTab] = useState<'episodes' | 'seasons' | 'characters' | 'overview' | 'related'>('episodes');
   const [copied, setCopied] = useState(false);
   const [anime, setAnime] = useState<any>(null);
@@ -58,7 +61,10 @@ export const AnimeDetailsPage: React.FC = () => {
         setAnime(null);
         setErrorType('NETWORK_ERROR');
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => {
+        setIsLoading(false);
+        dismissLoading();
+      });
   };
 
   useEffect(() => {
@@ -67,10 +73,12 @@ export const AnimeDetailsPage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="pt-40 pb-32 flex flex-col items-center justify-center text-center">
-        <Loader2 className="w-10 h-10 text-[#F01428] animate-spin mb-4" />
-        <p className="text-sm text-[#9E9EB2]">Loading anime information...</p>
-      </div>
+      <DemonPageLoader
+        fullScreen={true}
+        message="Summoning Anime Archives..."
+        subMessage="Consulting eternal AniList chronicles in Ultra HD..."
+        destination={`/anime/${id}`}
+      />
     );
   }
 
@@ -177,7 +185,13 @@ export const AnimeDetailsPage: React.FC = () => {
                 size="lg"
                 fullWidth
                 icon={<Play className="w-5 h-5 fill-white" />}
-                onClick={() => navigate(`/watch/${anime.id || anime.anilistId}?ep=1`)}
+                onClick={() => {
+                  triggerLoading(
+                    `Summoning ${anime.title.english || anime.title.romaji}...`,
+                    'Entering DevilMotion Streaming Chamber in Ultra HD...'
+                  );
+                  navigate(`/watch/${anime.id || anime.anilistId}?ep=1`);
+                }}
                 className="glow-red"
               >
                 Summon & Watch Ep 1
