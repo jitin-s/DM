@@ -12,6 +12,7 @@ import {
   Check,
   Loader2,
   Users,
+  Layers,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useWatchlist } from '../context/WatchlistContext';
@@ -25,7 +26,7 @@ export const AnimeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { isInWatchlist, toggleWatchlist } = useWatchlist();
-  const [activeTab, setActiveTab] = useState<'episodes' | 'characters' | 'overview' | 'related'>('episodes');
+  const [activeTab, setActiveTab] = useState<'episodes' | 'seasons' | 'characters' | 'overview' | 'related'>('episodes');
   const [copied, setCopied] = useState(false);
   const [anime, setAnime] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,8 +109,10 @@ export const AnimeDetailsPage: React.FC = () => {
   };
 
   const allEpisodes = anime?.episodesList || [];
-  const PAGE_SIZE = 24;
+  const relations = anime?.relations || [];
   const totalEpisodesCount = allEpisodes.length;
+  // Dynamic page size for clean range tabs (100 for >200 eps, 50 for >50 eps, 24 for shorter series)
+  const PAGE_SIZE = totalEpisodesCount > 200 ? 100 : totalEpisodesCount > 50 ? 50 : 24;
   const numRanges = Math.ceil(totalEpisodesCount / PAGE_SIZE);
   const ranges = Array.from({ length: numRanges }, (_, i) => ({
     start: i * PAGE_SIZE + 1,
@@ -299,18 +302,32 @@ export const AnimeDetailsPage: React.FC = () => {
         </div>
 
         {/* 3. Tabbed Navigation Section */}
-        <div className="mt-14 border-b border-white/[0.08] flex gap-8">
+        <div className="mt-14 border-b border-white/[0.08] flex flex-wrap gap-4 sm:gap-8">
           <button
             onClick={() => setActiveTab('episodes')}
             className={`pb-4 text-base font-bold font-heading transition-colors relative cursor-pointer ${
               activeTab === 'episodes' ? 'text-white' : 'text-[#9E9EB2] hover:text-white'
             }`}
           >
-            Episodes ({anime.episodesList?.length || anime.episodes || 12})
+            Episodes ({allEpisodes.length || anime.episodes || 12})
             {activeTab === 'episodes' && (
               <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#F01428] shadow-[0_0_8px_#F01428]" />
             )}
           </button>
+
+          {relations.length > 0 && (
+            <button
+              onClick={() => setActiveTab('seasons')}
+              className={`pb-4 text-base font-bold font-heading transition-colors relative cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'seasons' ? 'text-white' : 'text-[#9E9EB2] hover:text-white'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-[#F01428]" /> Seasons & Franchise ({relations.length})
+              {activeTab === 'seasons' && (
+                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#F01428] shadow-[0_0_8px_#F01428]" />
+              )}
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab('characters')}
@@ -410,6 +427,99 @@ export const AnimeDetailsPage: React.FC = () => {
                   ))}
                 </div>
               )}
+            </div>
+          )}
+
+          {/* SEASONS & FRANCHISE TAB */}
+          {activeTab === 'seasons' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between text-xs text-[#9E9EB2]">
+                <p>All connected seasons, prequels, sequels, movies, and spin-offs in this franchise:</p>
+                <span className="text-[#F01428] font-bold">{relations.length} Connected Titles</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {relations.map((rel: any) => {
+                  const formatRelType = (t: string) => {
+                    switch (t) {
+                      case 'SEQUEL':
+                        return { label: 'Sequel / Next Season', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' };
+                      case 'PREQUEL':
+                        return { label: 'Prequel / Previous', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' };
+                      case 'SIDE_STORY':
+                        return { label: 'Side Story', color: 'bg-purple-500/20 text-purple-400 border-purple-500/30' };
+                      case 'SPIN_OFF':
+                        return { label: 'Spin-Off', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' };
+                      case 'ALTERNATIVE':
+                        return { label: 'Alternative Version', color: 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30' };
+                      case 'PARENT':
+                        return { label: 'Main Series', color: 'bg-red-500/20 text-red-400 border-red-500/30' };
+                      default:
+                        return { label: t.replace(/_/g, ' '), color: 'bg-white/10 text-white border-white/20' };
+                    }
+                  };
+                  const badgeInfo = formatRelType(rel.relationType || 'RELATED');
+
+                  return (
+                    <div
+                      key={rel.id}
+                      className="flex flex-col bg-[#121218] border border-white/[0.08] hover:border-[#F01428]/40 rounded-xl overflow-hidden group transition-all duration-300"
+                    >
+                      <div className="flex gap-3 p-3 flex-1">
+                        <Link to={`/anime/${rel.id}`} className="relative w-20 aspect-[3/4] rounded-lg overflow-hidden shrink-0 bg-black/60">
+                          <img
+                            src={rel.coverImage || '/logo_cropped.png'}
+                            alt={rel.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        </Link>
+                        <div className="flex-1 min-w-0 flex flex-col justify-between">
+                          <div>
+                            <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border uppercase tracking-wider mb-1.5 ${badgeInfo.color}`}>
+                              {badgeInfo.label}
+                            </span>
+                            <Link
+                              to={`/anime/${rel.id}`}
+                              className="text-sm font-bold text-white font-heading line-clamp-2 hover:text-[#F01428] transition-colors"
+                            >
+                              {rel.title}
+                            </Link>
+                          </div>
+                          <div className="text-[11px] text-[#9E9EB2] flex flex-wrap items-center gap-2 mt-2">
+                            <span className="font-semibold text-white/80">{rel.format || 'TV'}</span>
+                            {rel.year && (
+                              <>
+                                <span>•</span>
+                                <span>{rel.year}</span>
+                              </>
+                            )}
+                            {rel.episodes && (
+                              <>
+                                <span>•</span>
+                                <span className="text-[#F01428] font-bold">{rel.episodes} EPS</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-[#16161E] px-3 py-2 border-t border-white/[0.06] flex items-center justify-between gap-2">
+                        <Link
+                          to={`/anime/${rel.id}`}
+                          className="text-xs text-[#9E9EB2] hover:text-white font-semibold transition-colors flex-1 text-center py-1 rounded-md bg-white/5 hover:bg-white/10"
+                        >
+                          View Details
+                        </Link>
+                        <Link
+                          to={`/watch/${rel.id}?ep=1`}
+                          className="text-xs text-white font-bold transition-colors flex-1 text-center py-1 rounded-md bg-[#F01428] hover:bg-[#D01020] shadow-sm shadow-[#F01428]/30 flex items-center justify-center gap-1"
+                        >
+                          <Play className="w-3 h-3 fill-white" /> Watch
+                        </Link>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
 

@@ -432,9 +432,13 @@ export class AniListService {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
               }
             }
           }
@@ -448,9 +452,13 @@ export class AniListService {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
                 averageScore
               }
             }
@@ -493,9 +501,13 @@ export class AniListService {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
               }
             }
           }
@@ -509,9 +521,13 @@ export class AniListService {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
                 averageScore
               }
             }

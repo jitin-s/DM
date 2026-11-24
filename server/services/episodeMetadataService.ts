@@ -39,7 +39,7 @@ export class EpisodeMetadataService {
     },
     options: { forceSync?: boolean; maxCount?: number } = {}
   ): Promise<FormattedEpisode[]> {
-    const { forceSync = false, maxCount = 100 } = options;
+    const { forceSync = false, maxCount = 2000 } = options;
 
     // 1. Check existing episodes in database
     let dbEpisodes: any[] = [];
@@ -339,7 +339,7 @@ export class EpisodeMetadataService {
     maxCount: number
   ): FormattedEpisode[] {
     const fallbackThumb = anime.bannerImage || anime.coverImage || '/logo_cropped.png';
-    const totalToGenerate = Math.min(count, maxCount);
+    const totalToGenerate = Math.max(count, 1);
     const episodes: FormattedEpisode[] = [];
 
     const isMovie = anime.format === 'MOVIE';

@@ -706,6 +706,26 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
     const formatted = formatAnimeItem(base);
 
     // STEP 4: High-Performance Non-Blocking Episode Assembly
+    // Resolve accurate total episodes (support 1000+ episode anime, releasing shows, movies)
+    let resolvedTotalEpisodes: number = 12;
+    if (formatted.format === 'MOVIE') {
+      resolvedTotalEpisodes = 1;
+    } else if (typeof base.totalEpisodes === 'number' && base.totalEpisodes > 0) {
+      resolvedTotalEpisodes = base.totalEpisodes;
+    } else if (typeof base.episodes === 'number' && base.episodes > 0) {
+      resolvedTotalEpisodes = base.episodes;
+    } else if (typeof animeData?.episodes === 'number' && animeData.episodes > 0) {
+      resolvedTotalEpisodes = animeData.episodes;
+    } else if (animeData?.nextAiringEpisode?.episode && animeData.nextAiringEpisode.episode > 1) {
+      // Releasing anime (e.g. One Piece ep 1181 next -> 1180 currently released)
+      resolvedTotalEpisodes = animeData.nextAiringEpisode.episode - 1;
+    } else if (dbRecord && Array.isArray(dbRecord.episodes) && dbRecord.episodes.length > 0) {
+      const maxEp = Math.max(...dbRecord.episodes.map((e: any) => e.episodeNumber || 0));
+      if (maxEp > 0) resolvedTotalEpisodes = maxEp;
+    } else if (base.status === 'RELEASING' && typeof base.latestEpisode === 'number' && base.latestEpisode > 0) {
+      resolvedTotalEpisodes = base.latestEpisode;
+    }
+
     const animeLookup = {
       id: dbRecord ? dbRecord.id : (base.dbId || String(base.id || base.anilistId)),
       anilistId: base.anilistId || base.id,
@@ -713,18 +733,14 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
       titleEnglish: formatted.title.english,
       titleRomaji: formatted.title.romaji,
       format: formatted.format,
-      totalEpisodes:
-        typeof base.totalEpisodes === 'number'
-          ? base.totalEpisodes
-          : typeof base.episodes === 'number'
-          ? base.episodes
-          : 12,
+      totalEpisodes: resolvedTotalEpisodes,
       duration: base.duration || 24,
       coverImage: formatted.coverImage?.large,
       bannerImage: formatted.bannerImage,
     };
 
     let episodesList: any[] = [];
+    const isMovie = formatted.format === 'MOVIE';
 
     // If DB already has episodes, format them immediately (<1ms)
     if (dbRecord && Array.isArray(dbRecord.episodes) && dbRecord.episodes.length > 0) {
@@ -738,7 +754,7 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
           japaneseTitle: ep.japaneseTitle || null,
           hasRealTitle: !isGeneric,
           isGenericTitle: isGeneric,
-          thumbnail: ep.thumbnail || ep.thumbnailUrl || formatted.bannerImage || formatted.coverImage.large,
+          thumbnail: ep.thumbnail || ep.thumbnailUrl || formatted.bannerImage || formatted.coverImage?.large,
           duration: `${base.duration || 24}m`,
           airDate: ep.airedAt
             ? new Date(ep.airedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
@@ -751,20 +767,42 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
         };
       });
 
+      // If DB has fewer episodes than resolved total (e.g. only 24 saved for a 500+ or 1000+ episode series), backfill the rest
+      const existingEpNums = new Set(episodesList.map(e => e.number));
+      if (episodesList.length < resolvedTotalEpisodes) {
+        for (let ep = 1; ep <= resolvedTotalEpisodes; ep++) {
+          if (!existingEpNums.has(ep)) {
+            episodesList.push({
+              id: `ep-${animeLookup.id}-${ep}`,
+              number: ep,
+              title: isMovie ? `${formatted.title.english} (Feature Film)` : `Episode ${ep}`,
+              japaneseTitle: null,
+              hasRealTitle: isMovie,
+              isGenericTitle: !isMovie,
+              thumbnail: formatted.bannerImage || formatted.coverImage?.large,
+              duration: isMovie ? `${base.duration || 110}m` : `${base.duration || 24}m`,
+              airDate: 'TBA',
+              filler: false,
+              recap: false,
+              metadataSource: 'ANILIST',
+              subAvailable: true,
+              dubAvailable: true,
+            });
+          }
+        }
+        episodesList.sort((a, b) => a.number - b.number);
+      }
+
       // If DB episodes don't have real titles yet, trigger background enrichment
       const hasRealTitles = episodesList.some(e => e.hasRealTitle);
       if (!hasRealTitles && animeLookup.malId) {
-        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: 100 }).catch(e => {
+        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: Math.min(resolvedTotalEpisodes, 500) }).catch(e => {
           console.warn(`[Background Episode Sync] failed for ${dbRecord.id}:`, e.message);
         });
       }
     } else {
-      // Fast fallback base episodes generated in <1ms without blocking details response
-      const totalCount = animeLookup.totalEpisodes || 12;
-      const count = Math.min(totalCount > 0 ? totalCount : 12, 100);
-      const isMovie = formatted.format === 'MOVIE';
-
-      for (let ep = 1; ep <= count; ep++) {
+      // Fast base episodes generated in <1ms without blocking details response
+      for (let ep = 1; ep <= resolvedTotalEpisodes; ep++) {
         episodesList.push({
           id: `ep-${animeLookup.id}-${ep}`,
           number: ep,
@@ -772,12 +810,12 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
           japaneseTitle: null,
           hasRealTitle: isMovie,
           isGenericTitle: !isMovie,
-          thumbnail: formatted.bannerImage || formatted.coverImage.large,
+          thumbnail: formatted.bannerImage || formatted.coverImage?.large,
           duration: isMovie ? `${base.duration || 110}m` : `${base.duration || 24}m`,
           airDate: 'TBA',
           filler: false,
           recap: false,
-          metadataSource: 'PLACEHOLDER',
+          metadataSource: 'ANILIST',
           subAvailable: true,
           dubAvailable: true,
         });
@@ -785,7 +823,7 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
 
       // Trigger asynchronous background sync if DB record exists
       if (dbRecord) {
-        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: 100 }).catch(e => {
+        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: Math.min(resolvedTotalEpisodes, 500) }).catch(e => {
           console.warn(`[Background Episode Sync] failed for ${dbRecord.id}:`, e.message);
         });
       }
@@ -811,15 +849,40 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
         ?.filter(Boolean)
         ?.map(formatAnimeItem) || [];
 
+    // Franchise & Season Relations (Prequels, Sequels, Side Stories, Movies, OVAs)
+    const rawRelations = animeData?.relations?.edges || [];
+    const relationsList = rawRelations
+      .filter((edge: any) => edge?.node && edge?.relationType)
+      .map((edge: any) => {
+        const n = edge.node;
+        const titleText = n.title?.english || n.title?.romaji || 'Untitled';
+        return {
+          id: String(n.id),
+          anilistId: n.id,
+          malId: n.idMal || null,
+          title: titleText,
+          relationType: edge.relationType,
+          format: n.format || 'TV',
+          status: n.status || 'FINISHED',
+          episodes: n.episodes || null,
+          year: n.seasonYear || null,
+          coverImage: n.coverImage?.large || n.coverImage?.medium || '',
+          bannerImage: n.bannerImage || '',
+        };
+      });
+
     // Next Airing Info
     const nextAiring = animeData?.nextAiringEpisode || dbRecord?.airingSchedules?.[0] || null;
 
     return res.json({
       anime: {
         ...formatted,
+        episodes: resolvedTotalEpisodes,
+        totalEpisodes: resolvedTotalEpisodes,
         episodesList,
         characters: charactersList,
         recommendations: recs,
+        relations: relationsList,
         nextAiring,
       },
     });

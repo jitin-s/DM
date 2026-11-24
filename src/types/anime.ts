@@ -99,13 +99,21 @@ export interface AnimeItem {
     episode: number;
   };
   recommendations?: AnimeItem[];
-  relations?: {
-    id: string;
-    title: string;
-    relationType: string;
-    format: AnimeFormat;
-    coverImage: string;
-  }[];
+  relations?: AnimeRelation[];
+}
+
+export interface AnimeRelation {
+  id: string;
+  anilistId?: number;
+  malId?: number | null;
+  title: string;
+  relationType: string;
+  format: AnimeFormat | string;
+  coverImage: string;
+  bannerImage?: string;
+  status?: string;
+  episodes?: number | null;
+  year?: number | null;
 }
 
 export interface ScheduleDay {

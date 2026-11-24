@@ -8,6 +8,7 @@ import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { EmptyState } from './components/ui/EmptyState';
 import { Loader2 } from 'lucide-react';
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Route-based Lazy Loading for Maximum Initial Page Load Speed
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
@@ -147,6 +148,7 @@ export const App: React.FC = () => {
             </Route>
           </Routes>
           <Analytics />
+          <SpeedInsights />
         </BrowserRouter>
       </WatchlistProvider>
     </AuthProvider>

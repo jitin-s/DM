@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Volume2,
   Globe2,
+  Layers,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useWatchlist } from '../context/WatchlistContext';
@@ -263,18 +264,69 @@ export const WatchPage: React.FC = () => {
     );
   }
 
-  const episodes =
-    anime.episodesList && anime.episodesList.length > 0
-      ? anime.episodesList
-      : Array.from({ length: anime.episodes || 12 }).map((_, i) => ({
-          id: `ep-${i + 1}`,
-          number: i + 1,
-          title: `Episode ${i + 1}`,
+  const rawEpisodes = (anime.episodesList && anime.episodesList.length > 0)
+    ? [...anime.episodesList]
+    : [];
+
+  const targetCount = anime.episodes || anime.totalEpisodes || rawEpisodes.length || 12;
+
+  if (rawEpisodes.length < targetCount) {
+    const existing = new Set(rawEpisodes.map((e: any) => e.number));
+    for (let i = 1; i <= targetCount; i++) {
+      if (!existing.has(i)) {
+        rawEpisodes.push({
+          id: `ep-${i}`,
+          number: i,
+          title: `Episode ${i}`,
           thumbnail: anime.bannerImage || anime.coverImage?.large,
           duration: '24m',
           subAvailable: true,
           dubAvailable: true,
-        }));
+        });
+      }
+    }
+    rawEpisodes.sort((a: any, b: any) => a.number - b.number);
+  }
+
+  const episodes = rawEpisodes.length > 0 ? rawEpisodes : Array.from({ length: targetCount }).map((_, i) => ({
+    id: `ep-${i + 1}`,
+    number: i + 1,
+    title: `Episode ${i + 1}`,
+    thumbnail: anime.bannerImage || anime.coverImage?.large,
+    duration: '24m',
+    subAvailable: true,
+    dubAvailable: true,
+  }));
+
+  const EP_PAGE_SIZE = episodes.length > 200 ? 100 : episodes.length > 50 ? 50 : 25;
+  const numEpRanges = Math.ceil(episodes.length / EP_PAGE_SIZE);
+  const currentEpRangeIndex = Math.min(Math.max(0, Math.floor((currentEpNum - 1) / EP_PAGE_SIZE)), Math.max(0, numEpRanges - 1));
+  const [selectedEpRange, setSelectedEpRange] = useState<number>(0);
+
+  useEffect(() => {
+    setSelectedEpRange(currentEpRangeIndex);
+  }, [currentEpNum, numEpRanges]);
+
+  const epRanges = Array.from({ length: numEpRanges }, (_, i) => ({
+    start: i * EP_PAGE_SIZE + 1,
+    end: Math.min((i + 1) * EP_PAGE_SIZE, episodes.length),
+  }));
+
+  const searchedEpisodes = epSearch.trim()
+    ? episodes.filter(
+        (ep: any) =>
+          ep.title?.toLowerCase().includes(epSearch.toLowerCase()) ||
+          ep.number.toString().includes(epSearch.trim())
+      )
+    : null;
+
+  const displayedPlaylistEpisodes = searchedEpisodes
+    ? searchedEpisodes
+    : numEpRanges > 1
+    ? episodes.slice(selectedEpRange * EP_PAGE_SIZE, (selectedEpRange + 1) * EP_PAGE_SIZE)
+    : episodes;
+
+  const relations = anime?.relations || [];
 
   const currentEpisode = episodes.find((e: any) => e.number === currentEpNum) || episodes[0];
   const hasPrev = currentEpNum > 1;
@@ -587,6 +639,33 @@ export const WatchPage: React.FC = () => {
                 </span>
               </div>
 
+              {/* Franchise / Season Quick Switcher */}
+              {relations.length > 0 && (
+                <div className="pt-2 pb-1 border-b border-white/[0.08]">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-[10px] font-bold text-[#9E9EB2] uppercase tracking-wider flex items-center gap-1">
+                      <Layers className="w-3 h-3 text-[#F01428]" /> Franchise & Seasons
+                    </span>
+                    <span className="text-[10px] text-[#F01428] font-bold">{relations.length} titles</span>
+                  </div>
+                  <div className="flex gap-1.5 overflow-x-auto pb-1.5 custom-scrollbar">
+                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#F01428] text-white shrink-0 shadow-sm shadow-[#F01428]/30">
+                      Current
+                    </span>
+                    {relations.map((rel: any) => (
+                      <Link
+                        key={rel.id}
+                        to={`/watch/${rel.id}?ep=1`}
+                        className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#1C1C26] text-[#9E9EB2] hover:text-white hover:bg-white/10 shrink-0 border border-white/5 transition-all truncate max-w-[120px]"
+                        title={rel.title}
+                      >
+                        {rel.title}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Episode Search Bar */}
               <div className="relative my-3">
                 <Search className="w-3.5 h-3.5 text-[#646478] absolute left-3 top-1/2 -translate-y-1/2" />
@@ -599,9 +678,28 @@ export const WatchPage: React.FC = () => {
                 />
               </div>
 
+              {/* Range Selector if > 25 episodes */}
+              {epRanges.length > 1 && !epSearch.trim() && (
+                <div className="flex flex-wrap gap-1 pb-2">
+                  {epRanges.map((range, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setSelectedEpRange(idx)}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition-all cursor-pointer ${
+                        selectedEpRange === idx
+                          ? 'bg-[#F01428] text-white border-[#F01428] font-bold shadow-sm shadow-[#F01428]/30'
+                          : 'bg-[#15151C] text-[#9E9EB2] border-white/10 hover:text-white'
+                      }`}
+                    >
+                      EP {range.start} - {range.end}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               {/* Scrollable Episodes List */}
               <div className="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                {filteredEpisodes.map((ep: any) => {
+                {displayedPlaylistEpisodes.map((ep: any) => {
                   const isActive = ep.number === currentEpNum;
                   const isWatched = watchedEpisodes.includes(ep.number);
 
@@ -675,6 +773,76 @@ export const WatchPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Seasons & Franchise Relations */}
+        {relations.length > 0 && (
+          <div className="mt-12">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-[#F01428]" />
+                <h3 className="text-lg font-bold text-white font-heading">
+                  Connected Seasons & Franchise
+                </h3>
+              </div>
+              <span className="text-xs text-[#9E9EB2] font-semibold">{relations.length} Titles Available</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              {relations.map((rel: any) => {
+                const badgeLabel = rel.relationType === 'SEQUEL'
+                  ? 'Sequel'
+                  : rel.relationType === 'PREQUEL'
+                  ? 'Prequel'
+                  : rel.relationType === 'SIDE_STORY'
+                  ? 'Side Story'
+                  : rel.relationType === 'SPIN_OFF'
+                  ? 'Spin-Off'
+                  : rel.relationType === 'ALTERNATIVE'
+                  ? 'Alt Story'
+                  : rel.relationType?.replace(/_/g, ' ') || 'Related';
+
+                return (
+                  <div
+                    key={rel.id}
+                    className="flex flex-col bg-[#121218] border border-white/[0.08] hover:border-[#F01428]/40 rounded-xl overflow-hidden group transition-all"
+                  >
+                    <Link to={`/watch/${rel.id}?ep=1`} className="relative aspect-[3/4] overflow-hidden bg-black/60">
+                      <img
+                        src={rel.coverImage || '/logo_cropped.png'}
+                        alt={rel.title}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#F01428] text-white uppercase tracking-wider shadow">
+                          {badgeLabel}
+                        </span>
+                      </div>
+                      {rel.episodes && (
+                        <div className="absolute bottom-2 right-2">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-black/80 text-white">
+                            {rel.episodes} EPS
+                          </span>
+                        </div>
+                      )}
+                    </Link>
+                    <div className="p-2.5 flex-1 flex flex-col justify-between">
+                      <Link
+                        to={`/watch/${rel.id}?ep=1`}
+                        className="text-xs font-bold text-white font-heading line-clamp-2 hover:text-[#F01428] transition-colors"
+                        title={rel.title}
+                      >
+                        {rel.title}
+                      </Link>
+                      <div className="flex items-center justify-between text-[10px] text-[#9E9EB2] mt-2">
+                        <span>{rel.format || 'TV'}</span>
+                        {rel.year && <span>{rel.year}</span>}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Recommendations Below Player */}
         {anime?.recommendations && anime.recommendations.length > 0 && (

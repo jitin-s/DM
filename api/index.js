@@ -1184,9 +1184,13 @@ var AniListService = class {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
               }
             }
           }
@@ -1200,9 +1204,13 @@ var AniListService = class {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
                 averageScore
               }
             }
@@ -1244,9 +1252,13 @@ var AniListService = class {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
               }
             }
           }
@@ -1260,9 +1272,13 @@ var AniListService = class {
                   romaji
                 }
                 format
+                status
+                episodes
+                seasonYear
                 coverImage {
                   large
                 }
+                bannerImage
                 averageScore
               }
             }
@@ -1544,7 +1560,7 @@ var EpisodeMetadataService = class {
    * Resolve episodes for an anime: checks local DB, enriches with MAL/Jikan/Kitsu if needed
    */
   static async getEpisodesForAnime(anime, options = {}) {
-    const { forceSync = false, maxCount = 100 } = options;
+    const { forceSync = false, maxCount = 2e3 } = options;
     let dbEpisodes = [];
     try {
       dbEpisodes = await prisma.episode.findMany({
@@ -1748,7 +1764,7 @@ var EpisodeMetadataService = class {
    */
   static generateFallbackEpisodes(anime, count, maxCount) {
     const fallbackThumb = anime.bannerImage || anime.coverImage || "/logo_cropped.png";
-    const totalToGenerate = Math.min(count, maxCount);
+    const totalToGenerate = Math.max(count, 1);
     const episodes = [];
     const isMovie = anime.format === "MOVIE";
     for (let ep = 1; ep <= totalToGenerate; ep++) {
@@ -2407,6 +2423,23 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
     }
     const base = animeData || dbRecord;
     const formatted = formatAnimeItem(base);
+    let resolvedTotalEpisodes = 12;
+    if (formatted.format === "MOVIE") {
+      resolvedTotalEpisodes = 1;
+    } else if (typeof base.totalEpisodes === "number" && base.totalEpisodes > 0) {
+      resolvedTotalEpisodes = base.totalEpisodes;
+    } else if (typeof base.episodes === "number" && base.episodes > 0) {
+      resolvedTotalEpisodes = base.episodes;
+    } else if (typeof animeData?.episodes === "number" && animeData.episodes > 0) {
+      resolvedTotalEpisodes = animeData.episodes;
+    } else if (animeData?.nextAiringEpisode?.episode && animeData.nextAiringEpisode.episode > 1) {
+      resolvedTotalEpisodes = animeData.nextAiringEpisode.episode - 1;
+    } else if (dbRecord && Array.isArray(dbRecord.episodes) && dbRecord.episodes.length > 0) {
+      const maxEp = Math.max(...dbRecord.episodes.map((e) => e.episodeNumber || 0));
+      if (maxEp > 0) resolvedTotalEpisodes = maxEp;
+    } else if (base.status === "RELEASING" && typeof base.latestEpisode === "number" && base.latestEpisode > 0) {
+      resolvedTotalEpisodes = base.latestEpisode;
+    }
     const animeLookup = {
       id: dbRecord ? dbRecord.id : base.dbId || String(base.id || base.anilistId),
       anilistId: base.anilistId || base.id,
@@ -2414,12 +2447,13 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
       titleEnglish: formatted.title.english,
       titleRomaji: formatted.title.romaji,
       format: formatted.format,
-      totalEpisodes: typeof base.totalEpisodes === "number" ? base.totalEpisodes : typeof base.episodes === "number" ? base.episodes : 12,
+      totalEpisodes: resolvedTotalEpisodes,
       duration: base.duration || 24,
       coverImage: formatted.coverImage?.large,
       bannerImage: formatted.bannerImage
     };
     let episodesList = [];
+    const isMovie = formatted.format === "MOVIE";
     if (dbRecord && Array.isArray(dbRecord.episodes) && dbRecord.episodes.length > 0) {
       episodesList = dbRecord.episodes.map((ep) => {
         const isGeneric = !ep.episodeTitle || Boolean(ep.episodeTitle.toLowerCase().match(/^episode\s+\d+$/i));
@@ -2430,7 +2464,7 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
           japaneseTitle: ep.japaneseTitle || null,
           hasRealTitle: !isGeneric,
           isGenericTitle: isGeneric,
-          thumbnail: ep.thumbnail || ep.thumbnailUrl || formatted.bannerImage || formatted.coverImage.large,
+          thumbnail: ep.thumbnail || ep.thumbnailUrl || formatted.bannerImage || formatted.coverImage?.large,
           duration: `${base.duration || 24}m`,
           airDate: ep.airedAt ? new Date(ep.airedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }) : ep.releaseDate || "TBA",
           filler: Boolean(ep.filler),
@@ -2440,17 +2474,38 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
           dubAvailable: true
         };
       });
+      const existingEpNums = new Set(episodesList.map((e) => e.number));
+      if (episodesList.length < resolvedTotalEpisodes) {
+        for (let ep = 1; ep <= resolvedTotalEpisodes; ep++) {
+          if (!existingEpNums.has(ep)) {
+            episodesList.push({
+              id: `ep-${animeLookup.id}-${ep}`,
+              number: ep,
+              title: isMovie ? `${formatted.title.english} (Feature Film)` : `Episode ${ep}`,
+              japaneseTitle: null,
+              hasRealTitle: isMovie,
+              isGenericTitle: !isMovie,
+              thumbnail: formatted.bannerImage || formatted.coverImage?.large,
+              duration: isMovie ? `${base.duration || 110}m` : `${base.duration || 24}m`,
+              airDate: "TBA",
+              filler: false,
+              recap: false,
+              metadataSource: "ANILIST",
+              subAvailable: true,
+              dubAvailable: true
+            });
+          }
+        }
+        episodesList.sort((a, b) => a.number - b.number);
+      }
       const hasRealTitles = episodesList.some((e) => e.hasRealTitle);
       if (!hasRealTitles && animeLookup.malId) {
-        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: 100 }).catch((e) => {
+        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: Math.min(resolvedTotalEpisodes, 500) }).catch((e) => {
           console.warn(`[Background Episode Sync] failed for ${dbRecord.id}:`, e.message);
         });
       }
     } else {
-      const totalCount = animeLookup.totalEpisodes || 12;
-      const count = Math.min(totalCount > 0 ? totalCount : 12, 100);
-      const isMovie = formatted.format === "MOVIE";
-      for (let ep = 1; ep <= count; ep++) {
+      for (let ep = 1; ep <= resolvedTotalEpisodes; ep++) {
         episodesList.push({
           id: `ep-${animeLookup.id}-${ep}`,
           number: ep,
@@ -2458,18 +2513,18 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
           japaneseTitle: null,
           hasRealTitle: isMovie,
           isGenericTitle: !isMovie,
-          thumbnail: formatted.bannerImage || formatted.coverImage.large,
+          thumbnail: formatted.bannerImage || formatted.coverImage?.large,
           duration: isMovie ? `${base.duration || 110}m` : `${base.duration || 24}m`,
           airDate: "TBA",
           filler: false,
           recap: false,
-          metadataSource: "PLACEHOLDER",
+          metadataSource: "ANILIST",
           subAvailable: true,
           dubAvailable: true
         });
       }
       if (dbRecord) {
-        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: 100 }).catch((e) => {
+        EpisodeMetadataService.getEpisodesForAnime(dbRecord, { forceSync: true, maxCount: Math.min(resolvedTotalEpisodes, 500) }).catch((e) => {
           console.warn(`[Background Episode Sync] failed for ${dbRecord.id}:`, e.message);
         });
       }
@@ -2486,13 +2541,34 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
       }
     }));
     const recs = animeData?.recommendations?.nodes?.map((n) => n.mediaRecommendation)?.filter(Boolean)?.map(formatAnimeItem) || [];
+    const rawRelations = animeData?.relations?.edges || [];
+    const relationsList = rawRelations.filter((edge) => edge?.node && edge?.relationType).map((edge) => {
+      const n = edge.node;
+      const titleText = n.title?.english || n.title?.romaji || "Untitled";
+      return {
+        id: String(n.id),
+        anilistId: n.id,
+        malId: n.idMal || null,
+        title: titleText,
+        relationType: edge.relationType,
+        format: n.format || "TV",
+        status: n.status || "FINISHED",
+        episodes: n.episodes || null,
+        year: n.seasonYear || null,
+        coverImage: n.coverImage?.large || n.coverImage?.medium || "",
+        bannerImage: n.bannerImage || ""
+      };
+    });
     const nextAiring = animeData?.nextAiringEpisode || dbRecord?.airingSchedules?.[0] || null;
     return res.json({
       anime: {
         ...formatted,
+        episodes: resolvedTotalEpisodes,
+        totalEpisodes: resolvedTotalEpisodes,
         episodesList,
         characters: charactersList,
         recommendations: recs,
+        relations: relationsList,
         nextAiring
       }
     });
