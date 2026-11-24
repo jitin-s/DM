@@ -5,7 +5,6 @@ import { Footer } from '../footer/Footer';
 import { SearchModal } from '../search/SearchModal';
 import { TopProgressBar } from '../navigation/TopProgressBar';
 import { DemonPageLoader } from '../common/DemonPageLoader';
-import { HilltopAdBanner } from '../ads/HilltopAdBanner';
 
 export const Layout: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -53,8 +52,6 @@ export const Layout: React.FC = () => {
       <main className="flex-1">
         <Outlet />
       </main>
-
-      <HilltopAdBanner />
 
       <Footer />
       <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
