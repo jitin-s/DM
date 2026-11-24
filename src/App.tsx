@@ -7,6 +7,7 @@ import { ScrollToTop } from './components/common/ScrollToTop';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import { EmptyState } from './components/ui/EmptyState';
 import { Loader2 } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 
 // Route-based Lazy Loading for Maximum Initial Page Load Speed
 const HomePage = lazy(() => import('./pages/HomePage').then(m => ({ default: m.HomePage })));
@@ -145,6 +146,7 @@ export const App: React.FC = () => {
               <Route path="*" element={<NotFoundPage />} />
             </Route>
           </Routes>
+          <Analytics />
         </BrowserRouter>
       </WatchlistProvider>
     </AuthProvider>

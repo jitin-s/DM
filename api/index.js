@@ -114,12 +114,12 @@ var securityHeaders = (req, res, next) => {
   );
   const cspDirectives = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com data:",
     "img-src 'self' data: blob: https: http:",
     "frame-src 'self' https://aniembed.se https://embed.vidwave.sbs https://embed.vidwave.site https://animeembed.com https://megaplay.buzz https://vidsrc.to https://anikotoapi.site",
-    "connect-src 'self' http://localhost:* http://127.0.0.1:* https://graphql.anilist.co https://api.myanimelist.net https://api.jikan.moe https://aniembed.se https://embed.vidwave.sbs https://embed.vidwave.site https://animeembed.com https://anikotoapi.site",
+    "connect-src 'self' http://localhost:* http://127.0.0.1:* https://graphql.anilist.co https://api.myanimelist.net https://api.jikan.moe https://aniembed.se https://embed.vidwave.sbs https://embed.vidwave.site https://animeembed.com https://anikotoapi.site https://va.vercel-scripts.com https://vitals.vercel-insights.com",
     "frame-ancestors 'self'",
     "object-src 'none'",
     "base-uri 'self'",

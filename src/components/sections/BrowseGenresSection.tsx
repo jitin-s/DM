@@ -34,6 +34,9 @@ export const BrowseGenresSection: React.FC = () => {
                 src={genre.banner}
                 alt={genre.name}
                 loading="lazy"
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                }}
                 className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500 filter brightness-[0.4] group-hover:brightness-[0.55]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
