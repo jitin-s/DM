@@ -411,48 +411,17 @@ export const api = {
     // Client-side playback history managed in localStorage
   },
 
-  // --- AUTHENTICATION & USER MANAGEMENT ---
-  async login(email: string, password: string): Promise<{ user: any; token: string }> {
-    const res = await fetchWithTimeout(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-    if (data.token) {
-      localStorage.setItem('devilmotion_token', data.token);
-    }
-    return data;
+  // --- AUTHENTICATION & USER MANAGEMENT (Public Platform - No accounts/login required) ---
+  async login(_email: string, _password: string): Promise<{ user: any; token: string }> {
+    return { user: null, token: '' };
   },
 
-  async register(name: string, email: string, password: string): Promise<{ user: any; token: string }> {
-    const res = await fetchWithTimeout(`${API_BASE}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Registration failed');
-    if (data.token) {
-      localStorage.setItem('devilmotion_token', data.token);
-    }
-    return data;
+  async register(_name: string, _email: string, _password: string): Promise<{ user: any; token: string }> {
+    return { user: null, token: '' };
   },
 
   async getCurrentUser(): Promise<any | null> {
-    const token = localStorage.getItem('devilmotion_token');
-    if (!token) return null;
-    try {
-      const res = await fetchWithTimeout(`${API_BASE}/auth/me`, {
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      return data.user || null;
-    } catch {
-      return null;
-    }
+    return null;
   },
 
   logoutUser() {

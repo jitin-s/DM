@@ -66,6 +66,7 @@ export const WatchPage: React.FC = () => {
   });
   const [cinemaMode, setCinemaMode] = useState(false);
   const [epSearch, setEpSearch] = useState('');
+  const [selectedEpRange, setSelectedEpRange] = useState<number>(0);
   const lastSavedTimeRef = useRef<number>(0);
   const lastProgressSecondsRef = useRef<number>(0);
 
@@ -99,6 +100,16 @@ export const WatchPage: React.FC = () => {
         setIsAnimeLoading(false);
       });
   }, [id]);
+
+  // Synchronize episode playlist range selector with current episode
+  useEffect(() => {
+    if (!anime) return;
+    const total = anime.episodes || anime.totalEpisodes || anime.episodesList?.length || 12;
+    const pageSize = total > 200 ? 100 : total > 50 ? 50 : 25;
+    const maxRange = Math.max(0, Math.ceil(total / pageSize) - 1);
+    const rangeIdx = Math.min(Math.max(0, Math.floor((currentEpNum - 1) / pageSize)), maxRange);
+    setSelectedEpRange(rangeIdx);
+  }, [currentEpNum, anime]);
 
   // Check live stream audio availability whenever anime or episode changes
   useEffect(() => {
@@ -300,12 +311,6 @@ export const WatchPage: React.FC = () => {
 
   const EP_PAGE_SIZE = episodes.length > 200 ? 100 : episodes.length > 50 ? 50 : 25;
   const numEpRanges = Math.ceil(episodes.length / EP_PAGE_SIZE);
-  const currentEpRangeIndex = Math.min(Math.max(0, Math.floor((currentEpNum - 1) / EP_PAGE_SIZE)), Math.max(0, numEpRanges - 1));
-  const [selectedEpRange, setSelectedEpRange] = useState<number>(0);
-
-  useEffect(() => {
-    setSelectedEpRange(currentEpRangeIndex);
-  }, [currentEpNum, numEpRanges]);
 
   const epRanges = Array.from({ length: numEpRanges }, (_, i) => ({
     start: i * EP_PAGE_SIZE + 1,
@@ -334,6 +339,8 @@ export const WatchPage: React.FC = () => {
 
   const handlePrevEp = () => {
     if (hasPrev) {
+      setIsStreamLoading(true);
+      setStreamingState('CHECKING');
       setSearchParams({ ep: (currentEpNum - 1).toString() });
       setIsPlaying(true);
     }
@@ -341,6 +348,8 @@ export const WatchPage: React.FC = () => {
 
   const handleNextEp = () => {
     if (hasNext) {
+      setIsStreamLoading(true);
+      setStreamingState('CHECKING');
       setSearchParams({ ep: (currentEpNum + 1).toString() });
       setIsPlaying(true);
     }
@@ -413,6 +422,7 @@ export const WatchPage: React.FC = () => {
             <VidWavePlayer
               embedUrl={embedUrl}
               title={`${anime.title.english || anime.title.romaji} - Episode ${currentEpNum}`}
+              episodeNumber={currentEpNum}
               posterUrl={currentEpisode?.thumbnail || anime.bannerImage || anime.coverImage?.large}
               isPlaying={isPlaying}
               onPlay={() => setIsPlaying(true)}
@@ -707,6 +717,12 @@ export const WatchPage: React.FC = () => {
                     <div
                       key={ep.id || ep.number}
                       onClick={() => {
+                        if (ep.number === currentEpNum) {
+                          setIsPlaying(true);
+                          return;
+                        }
+                        setIsStreamLoading(true);
+                        setStreamingState('CHECKING');
                         setSearchParams({ ep: ep.number.toString() });
                         setIsPlaying(true);
                       }}

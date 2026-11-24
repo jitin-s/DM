@@ -624,32 +624,30 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
       dbRecord = null;
     }
 
-    // STEP 2: External API Fetch If Not in Database
-    if (!dbRecord) {
-      if (isNumeric) {
+    // STEP 2: External API Fetch (Always ensure live AniList data for relations and real-time airing)
+    const targetAnilistId = dbRecord?.anilistId || (isNumeric && !isExplicitMal ? numericId : null);
+
+    if (!animeData) {
+      if (targetAnilistId) {
+        try {
+          animeData = await AniListService.getDetails(targetAnilistId);
+        } catch (e: any) {
+          console.warn('[Anime Details] AniList getDetails warning:', e.message);
+        }
+      } else if (isNumeric) {
         if (isExplicitMal) {
-          // Explicit MAL lookup
           try {
             animeData = await AniListService.getDetailsByMalId(numericId);
           } catch (e: any) {
             console.warn('[Anime Details] AniList getDetailsByMalId warning:', e.message);
           }
-        } else if (isExplicitAniList) {
-          // Explicit AniList lookup
-          try {
-            animeData = await AniListService.getDetails(numericId);
-          } catch (e: any) {
-            console.warn('[Anime Details] AniList getDetails warning:', e.message);
-          }
         } else {
-          // Default numeric: Try AniList ID first
           try {
             animeData = await AniListService.getDetails(numericId);
           } catch (err: any) {
             console.warn('[Anime Details] AniList ID lookup warning:', err.message);
           }
 
-          // If not found on AniList by ID, check if this number was actually a MAL ID
           if (!animeData) {
             try {
               animeData = await AniListService.getDetailsByMalId(numericId);
@@ -710,15 +708,15 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
     let resolvedTotalEpisodes: number = 12;
     if (formatted.format === 'MOVIE') {
       resolvedTotalEpisodes = 1;
-    } else if (typeof base.totalEpisodes === 'number' && base.totalEpisodes > 0) {
+    } else if (animeData?.nextAiringEpisode?.episode && animeData.nextAiringEpisode.episode > 1) {
+      // Releasing anime always uses live nextAiringEpisode (e.g. One Piece ep 1181 next -> 1180 currently released)
+      resolvedTotalEpisodes = animeData.nextAiringEpisode.episode - 1;
+    } else if (typeof animeData?.episodes === 'number' && animeData.episodes > 0) {
+      resolvedTotalEpisodes = animeData.episodes;
+    } else if (typeof base.totalEpisodes === 'number' && base.totalEpisodes > 0 && base.status !== 'RELEASING') {
       resolvedTotalEpisodes = base.totalEpisodes;
     } else if (typeof base.episodes === 'number' && base.episodes > 0) {
       resolvedTotalEpisodes = base.episodes;
-    } else if (typeof animeData?.episodes === 'number' && animeData.episodes > 0) {
-      resolvedTotalEpisodes = animeData.episodes;
-    } else if (animeData?.nextAiringEpisode?.episode && animeData.nextAiringEpisode.episode > 1) {
-      // Releasing anime (e.g. One Piece ep 1181 next -> 1180 currently released)
-      resolvedTotalEpisodes = animeData.nextAiringEpisode.episode - 1;
     } else if (dbRecord && Array.isArray(dbRecord.episodes) && dbRecord.episodes.length > 0) {
       const maxEp = Math.max(...dbRecord.episodes.map((e: any) => e.episodeNumber || 0));
       if (maxEp > 0) resolvedTotalEpisodes = maxEp;
@@ -850,9 +848,10 @@ animeRouter.get('/:id', cacheResponse(900), async (req: Request, res: Response) 
         ?.map(formatAnimeItem) || [];
 
     // Franchise & Season Relations (Prequels, Sequels, Side Stories, Movies, OVAs)
+    const videoFormats = new Set(['TV', 'TV_SHORT', 'MOVIE', 'OVA', 'ONA', 'SPECIAL']);
     const rawRelations = animeData?.relations?.edges || [];
     const relationsList = rawRelations
-      .filter((edge: any) => edge?.node && edge?.relationType)
+      .filter((edge: any) => edge?.node && edge?.relationType && (!edge.node.format || videoFormats.has(edge.node.format)))
       .map((edge: any) => {
         const n = edge.node;
         const titleText = n.title?.english || n.title?.romaji || 'Untitled';

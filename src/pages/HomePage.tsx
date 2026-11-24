@@ -85,8 +85,8 @@ export const HomePage: React.FC = () => {
       {/* 1.5 Continue Watching (Recorded History) */}
       {historyItems.length > 0 && (
         <AnimeGridSection
-          title="Continue Watching"
-          subtitle="Resume playback where you left off"
+          title="Continue Your Journey"
+          subtitle="Resume playback where your footsteps paused in the realm"
           icon={<History className="w-5 h-5 text-[#F01428]" />}
           items={historyItems}
           viewAllLink="/history"
@@ -112,8 +112,8 @@ export const HomePage: React.FC = () => {
 
       {/* 7. Top-Rated Anime */}
       <AnimeGridSection
-        title="Top Rated Masterpieces"
-        subtitle="Critically acclaimed series with the highest community ratings on DevilMotion"
+        title="Summoned Masterpieces"
+        subtitle="Critically acclaimed series with the highest praise across all dimensions"
         icon={<Award className="w-5 h-5 text-[#F01428]" />}
         items={topRated}
         viewAllLink="/anime?sort=rating"
@@ -123,8 +123,8 @@ export const HomePage: React.FC = () => {
 
       {/* 8. Hindi Dubbed Anime */}
       <AnimeGridSection
-        title="Hindi Dubbed Anime"
-        subtitle="Popular action and fantasy anime featuring verified Hindi language audio"
+        title="Hindi Dubbed Archives"
+        subtitle="Popular action and fantasy anime summoned with authentic Hindi voice casting"
         icon={<Languages className="w-5 h-5 text-[#F01428]" />}
         items={hindiDubbed}
         viewAllLink="/anime?genre=Action"
@@ -134,8 +134,8 @@ export const HomePage: React.FC = () => {
 
       {/* 9. English Dubbed Anime */}
       <AnimeGridSection
-        title="English Dubbed Anime"
-        subtitle="Full English voice casts for international streaming"
+        title="English Dubbed Chronicles"
+        subtitle="Full English vocal performances synchronized for the realm"
         icon={<Globe className="w-5 h-5 text-[#F01428]" />}
         items={englishDubbed}
         viewAllLink="/anime?genre=Fantasy"
@@ -145,8 +145,8 @@ export const HomePage: React.FC = () => {
 
       {/* 10. Recently Released Anime Movies */}
       <AnimeGridSection
-        title="Anime Feature Films"
-        subtitle="Theatrical releases and animated cinematic experiences"
+        title="Theatrical Chronicles"
+        subtitle="Feature-length cinematic legends that transcend ordinary stories"
         icon={<Clapperboard className="w-5 h-5 text-[#F01428]" />}
         items={movies}
         viewAllLink="/movies"
@@ -156,8 +156,8 @@ export const HomePage: React.FC = () => {
 
       {/* 11. Upcoming Anime */}
       <AnimeGridSection
-        title="Upcoming Releases"
-        subtitle="Most anticipated premieres arriving next broadcast season"
+        title="Upcoming Realm Arrivals"
+        subtitle="Most anticipated premieres breaching the gates next broadcast season"
         icon={<Calendar className="w-5 h-5 text-[#F01428]" />}
         items={upcoming}
         viewAllLink="/anime?status=NOT_YET_RELEASED"
@@ -167,8 +167,8 @@ export const HomePage: React.FC = () => {
 
       {/* 12. Recommended Anime */}
       <AnimeGridSection
-        title="Recommended For You"
-        subtitle="Curated dark fantasy, action, and supernatural series"
+        title="Demonic Recommendations"
+        subtitle="Curated dark fantasy, action, and supernatural legends discovered for you"
         icon={<ThumbsUp className="w-5 h-5 text-[#F01428]" />}
         items={popular.slice(3, 9)}
         viewAllLink="/anime"

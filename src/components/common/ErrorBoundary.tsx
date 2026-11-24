@@ -47,11 +47,11 @@ export class ErrorBoundary extends Component<Props, State> {
               <AlertTriangle className="w-8 h-8" />
             </div>
 
-            <h1 className="text-2xl font-black font-heading text-white mb-2 tracking-tight">
-              Something went wrong
+            <h1 className="text-xl sm:text-2xl font-black font-heading text-white mb-2 tracking-tight">
+              Something Disrupted the Connection Between Realms
             </h1>
             <p className="text-sm text-[#9E9EB2] mb-6">
-              An unexpected display glitch occurred. Our demons are already working on restoring balance.
+              A mystical fracture occurred while loading this page. Our demons have contained the rift and are restoring balance.
             </p>
 
             {this.state.error?.message && (
@@ -67,13 +67,13 @@ export class ErrorBoundary extends Component<Props, State> {
                 onClick={this.handleReload}
                 className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-[#F01428] hover:bg-[#ff2b44] text-white text-sm font-bold shadow-lg shadow-[#F01428]/30 transition-all cursor-pointer"
               >
-                <RefreshCw className="w-4 h-4" /> Try Again
+                <RefreshCw className="w-4 h-4" /> Summon Again
               </button>
               <button
                 onClick={this.handleGoHome}
                 className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-white text-sm font-semibold border border-white/10 transition-colors cursor-pointer"
               >
-                <Home className="w-4 h-4" /> Go to Home
+                <Home className="w-4 h-4" /> Return to the Realm
               </button>
             </div>
           </div>

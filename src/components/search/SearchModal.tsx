@@ -169,7 +169,7 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
             type="text"
             value={query}
             onChange={e => setQuery(e.target.value)}
-            placeholder="Search anime title, movie, genre, studio..."
+            placeholder="Summon anime title, movie, genre, studio from the archives..."
             className="w-full bg-transparent text-white placeholder-[#646478] text-base focus:outline-none"
           />
           {query && (
@@ -209,8 +209,8 @@ export const SearchModal: React.FC<SearchModalProps> = ({ isOpen, onClose }) => 
 
               {!isSearching && results.length === 0 ? (
                 <div className="text-center py-8 text-[#9E9EB2]">
-                  <p className="text-sm font-semibold text-white">No anime found matching "{query}"</p>
-                  <p className="text-xs text-[#646478] mt-1">Try searching by romaji title, English name, or keyword</p>
+                  <p className="text-sm font-semibold text-white">Even our demons couldn't find "{query}" in the archives</p>
+                  <p className="text-xs text-[#646478] mt-1">Try another title or keyword. The realm is vast.</p>
                 </div>
               ) : (
                 <div className="space-y-2">

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Play, Loader2, AlertCircle, RefreshCw, Volume2, ShieldCheck, CheckCircle2 } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { DemonEpisodeLoadingOverlay } from './DemonEpisodeLoadingOverlay';
 
 export type StreamingState =
   | 'IDLE'
@@ -18,6 +19,7 @@ export type StreamingState =
 interface VidWavePlayerProps {
   embedUrl: string | null;
   title: string;
+  episodeNumber?: number;
   posterUrl?: string;
   isPlaying: boolean;
   onPlay: () => void;
@@ -38,6 +40,7 @@ interface VidWavePlayerProps {
 export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
   embedUrl,
   title,
+  episodeNumber = 1,
   posterUrl,
   isPlaying,
   onPlay,
@@ -223,21 +226,16 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
             }}
           />
 
-          {/* Staged Loading Overlay */}
-          {(!iframeLoaded || isLoading) && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/75 backdrop-blur-md pointer-events-none transition-opacity z-20">
-              <Loader2 className="w-9 h-9 text-[#F01428] animate-spin mb-3" />
-              <div className="text-center space-y-1">
-                <p className="text-sm text-white font-semibold">
-                  {streamingState === 'CHECKING' && 'Finding available streams...'}
-                  {streamingState === 'INITIALIZING' && 'Initializing stream player...'}
-                  {streamingState === 'SWITCHING_SOURCE' && 'Finding another working stream...'}
-                  {(!streamingState || streamingState === 'IDLE' || streamingState === 'READY') && 'Connecting to DevilMotion Player...'}
-                </p>
-                <p className="text-xs text-[#9E9EB2]">Verifying selected audio and optimizing bandwidth...</p>
-              </div>
-            </div>
-          )}
+          {/* Demon Episode Loading & Initialization Overlay */}
+          <DemonEpisodeLoadingOverlay
+            isOpen={!iframeLoaded || isLoading || Boolean(streamError)}
+            animeTitle={title}
+            episodeNumber={episodeNumber}
+            state={streamError ? 'failed' : (isLoading ? 'connecting' : (streamingState.toLowerCase() || 'initializing_player'))}
+            error={streamError}
+            onRetry={onRetry}
+            onSwitchSource={onSwitchServer}
+          />
 
           {/* Real-time Status / Auto-skip Toast */}
           {(statusNotification || skipNotification) && (

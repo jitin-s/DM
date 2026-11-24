@@ -2355,19 +2355,20 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
       console.warn("[Anime Details] DB cache read notice:", dbErr.message);
       dbRecord = null;
     }
-    if (!dbRecord) {
-      if (isNumeric) {
+    const targetAnilistId = dbRecord?.anilistId || (isNumeric && !isExplicitMal ? numericId : null);
+    if (!animeData) {
+      if (targetAnilistId) {
+        try {
+          animeData = await AniListService.getDetails(targetAnilistId);
+        } catch (e) {
+          console.warn("[Anime Details] AniList getDetails warning:", e.message);
+        }
+      } else if (isNumeric) {
         if (isExplicitMal) {
           try {
             animeData = await AniListService.getDetailsByMalId(numericId);
           } catch (e) {
             console.warn("[Anime Details] AniList getDetailsByMalId warning:", e.message);
-          }
-        } else if (isExplicitAniList) {
-          try {
-            animeData = await AniListService.getDetails(numericId);
-          } catch (e) {
-            console.warn("[Anime Details] AniList getDetails warning:", e.message);
           }
         } else {
           try {
@@ -2426,14 +2427,14 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
     let resolvedTotalEpisodes = 12;
     if (formatted.format === "MOVIE") {
       resolvedTotalEpisodes = 1;
-    } else if (typeof base.totalEpisodes === "number" && base.totalEpisodes > 0) {
+    } else if (animeData?.nextAiringEpisode?.episode && animeData.nextAiringEpisode.episode > 1) {
+      resolvedTotalEpisodes = animeData.nextAiringEpisode.episode - 1;
+    } else if (typeof animeData?.episodes === "number" && animeData.episodes > 0) {
+      resolvedTotalEpisodes = animeData.episodes;
+    } else if (typeof base.totalEpisodes === "number" && base.totalEpisodes > 0 && base.status !== "RELEASING") {
       resolvedTotalEpisodes = base.totalEpisodes;
     } else if (typeof base.episodes === "number" && base.episodes > 0) {
       resolvedTotalEpisodes = base.episodes;
-    } else if (typeof animeData?.episodes === "number" && animeData.episodes > 0) {
-      resolvedTotalEpisodes = animeData.episodes;
-    } else if (animeData?.nextAiringEpisode?.episode && animeData.nextAiringEpisode.episode > 1) {
-      resolvedTotalEpisodes = animeData.nextAiringEpisode.episode - 1;
     } else if (dbRecord && Array.isArray(dbRecord.episodes) && dbRecord.episodes.length > 0) {
       const maxEp = Math.max(...dbRecord.episodes.map((e) => e.episodeNumber || 0));
       if (maxEp > 0) resolvedTotalEpisodes = maxEp;
@@ -2541,8 +2542,9 @@ animeRouter.get("/:id", cacheResponse(900), async (req, res) => {
       }
     }));
     const recs = animeData?.recommendations?.nodes?.map((n) => n.mediaRecommendation)?.filter(Boolean)?.map(formatAnimeItem) || [];
+    const videoFormats = /* @__PURE__ */ new Set(["TV", "TV_SHORT", "MOVIE", "OVA", "ONA", "SPECIAL"]);
     const rawRelations = animeData?.relations?.edges || [];
-    const relationsList = rawRelations.filter((edge) => edge?.node && edge?.relationType).map((edge) => {
+    const relationsList = rawRelations.filter((edge) => edge?.node && edge?.relationType && (!edge.node.format || videoFormats.has(edge.node.format))).map((edge) => {
       const n = edge.node;
       const titleText = n.title?.english || n.title?.romaji || "Untitled";
       return {

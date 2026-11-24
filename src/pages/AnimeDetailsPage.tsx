@@ -174,7 +174,7 @@ export const AnimeDetailsPage: React.FC = () => {
                 onClick={() => navigate(`/watch/${anime.id || anime.anilistId}?ep=1`)}
                 className="glow-red"
               >
-                Watch Episode 1
+                Summon & Watch Ep 1
               </Button>
               <Button
                 variant={inWatchlist ? 'primary' : 'secondary'}
@@ -188,7 +188,7 @@ export const AnimeDetailsPage: React.FC = () => {
                 }
                 onClick={() => toggleWatchlist(anime.id)}
               >
-                {inWatchlist ? 'In Watchlist' : 'Add to Watchlist'}
+                {inWatchlist ? 'In Dark Grimoire' : 'Add to Grimoire'}
               </Button>
             </div>
           </div>

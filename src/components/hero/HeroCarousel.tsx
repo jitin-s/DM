@@ -131,7 +131,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ items }) => {
               onClick={() => navigate(`/watch/${current.id}`)}
               className="glow-red"
             >
-              Watch Now
+              Summon & Watch
             </Button>
 
             <Link to={`/anime/${current.id}`}>
@@ -140,7 +140,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ items }) => {
                 size="lg"
                 icon={<Info className="w-5 h-5 text-[#9E9EB2]" />}
               >
-                More Details
+                Inspect Archives
               </Button>
             </Link>
 
