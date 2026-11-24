@@ -23,6 +23,8 @@ import { Button } from '../components/ui/Button';
 import { EpisodeCard } from '../components/cards/EpisodeCard';
 import { AnimeCard } from '../components/cards/AnimeCard';
 import { EmptyState } from '../components/ui/EmptyState';
+import { AnimeEmberParticles } from '../components/common/AnimeEmberParticles';
+import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
 
 export const AnimeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -137,7 +139,7 @@ export const AnimeDetailsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen pb-20">
-      {/* 1. Backdrop Banner Header */}
+      {/* 1. Backdrop Banner Header with Floating Embers */}
       <div className="relative w-full h-[55vh] md:h-[65vh] overflow-hidden bg-[#08080A]">
         <img
           src={anime.bannerImage || anime.coverImage?.extraLarge || anime.coverImage?.large}
@@ -146,6 +148,7 @@ export const AnimeDetailsPage: React.FC = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#08080A] via-[#08080A]/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#08080A]/90 via-[#08080A]/40 to-transparent" />
+        <AnimeEmberParticles count={22} className="opacity-70 z-10" />
       </div>
 
       {/* 2. Main Details Floating Header */}
@@ -153,11 +156,12 @@ export const AnimeDetailsPage: React.FC = () => {
         <div className="flex flex-col md:flex-row gap-8 items-start">
           {/* Poster Box */}
           <div className="w-48 sm:w-60 md:w-64 shrink-0 mx-auto md:mx-0">
-            <div className="aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#15151C] border-2 border-white/10 shadow-2xl shadow-black/80 group relative">
+            <div className="aspect-[2/3] w-full rounded-2xl overflow-hidden bg-[#15151C] border-2 border-white/10 shadow-2xl shadow-black/80 group relative hover:border-[#F01428] hover:shadow-[0_0_30px_rgba(240,20,40,0.4)] transition-all duration-300">
+              <div className="card-sheen-sweep" />
               <img
                 src={anime.coverImage?.extraLarge || anime.coverImage?.large}
                 alt={anime.title.english}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
               <div className="absolute top-3 left-3">
                 <Badge variant="red" size="sm">
@@ -193,18 +197,20 @@ export const AnimeDetailsPage: React.FC = () => {
                 {inWatchlist ? 'In Dark Grimoire' : 'Add to Grimoire'}
               </Button>
 
-              {/* Direct Link Ad - High Speed Stream */}
-              <a
-                href="https://uplcm.com/4/12340281"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-amber-300 bg-gradient-to-r from-amber-500/15 via-[#F01428]/20 to-amber-500/15 hover:from-amber-500/25 hover:to-[#F01428]/30 border border-amber-500/30 transition-all flex items-center justify-center gap-2 shadow-sm shadow-amber-500/10 cursor-pointer"
-                title="Direct Ultra Speed Mirror (Sponsored)"
-              >
-                <Flame className="w-3.5 h-3.5 text-amber-400" />
-                <span>⚡ VIP Stream Server (Ad)</span>
-                <ExternalLink className="w-3 h-3 text-amber-400" />
-              </a>
+              {/* Direct Link Ad - High Speed Stream (Configurable via adsConfig.ts) */}
+              {ADS_ENABLED && (
+                <a
+                  href={AD_CONFIG.directLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-amber-300 bg-gradient-to-r from-amber-500/15 via-[#F01428]/20 to-amber-500/15 hover:from-amber-500/25 hover:to-[#F01428]/30 border border-amber-500/30 transition-all flex items-center justify-center gap-2 shadow-sm shadow-amber-500/10 cursor-pointer"
+                  title="Direct Ultra Speed Mirror (Sponsored)"
+                >
+                  <Flame className="w-3.5 h-3.5 text-amber-400" />
+                  <span>⚡ VIP Stream Server (Ad)</span>
+                  <ExternalLink className="w-3 h-3 text-amber-400" />
+                </a>
+              )}
             </div>
           </div>
 

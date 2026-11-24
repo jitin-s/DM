@@ -21,6 +21,8 @@ import { Badge } from '../components/ui/Badge';
 import { AnimeCard } from '../components/cards/AnimeCard';
 import { EmptyState } from '../components/ui/EmptyState';
 import { VidWavePlayer } from '../components/player/VidWavePlayer';
+import { AnimeEmberParticles } from '../components/common/AnimeEmberParticles';
+import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
 const formatServerLabel = (server: { id: string; name: string; whiteLabelName?: string }, index?: number): string => {
@@ -384,11 +386,14 @@ export const WatchPage: React.FC = () => {
 
   return (
     <div
-      className={`min-h-screen pt-20 sm:pt-24 pb-20 transition-colors duration-500 ${
+      className={`min-h-screen pt-20 sm:pt-24 pb-20 transition-colors duration-500 relative ${
         cinemaMode ? 'bg-[#040406]' : 'bg-[#08080A]'
       }`}
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      {/* Ambient Demonic Embers in backdrop */}
+      {!cinemaMode && <AnimeEmberParticles count={14} className="opacity-30 fixed inset-0 pointer-events-none" />}
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Breadcrumb Navigation */}
         <div className="flex items-center justify-between text-xs text-[#9E9EB2] mb-4">
           <div className="flex items-center gap-2">
@@ -419,26 +424,31 @@ export const WatchPage: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Video Stream Player Container */}
           <div className="lg:col-span-2 space-y-4">
-            {/* Dedicated Responsive DevilMotion Real-Time Player */}
-            <VidWavePlayer
-              embedUrl={embedUrl}
-              title={`${anime.title.english || anime.title.romaji} - Episode ${currentEpNum}`}
-              episodeNumber={currentEpNum}
-              posterUrl={currentEpisode?.thumbnail || anime.bannerImage || anime.coverImage?.large}
-              isPlaying={isPlaying}
-              onPlay={() => setIsPlaying(true)}
-              onTimeUpdate={handleTimeUpdate}
-              onComplete={handleNextEp}
-              onAutoNext={handleNextEp}
-              onError={handlePlayerError}
-              isLoading={isStreamLoading}
-              streamError={streamError}
-              onRetry={() => fetchStreamData()}
-              audio={audioTrack}
-              providerName="DevilMotion Stream Node"
-              streamingState={streamingState}
-              onSwitchServer={() => handlePlayerError()}
-            />
+            {/* Dedicated Responsive DevilMotion Real-Time Player with Cinema Ambient Glow */}
+            <div className="relative group/player">
+              {/* Peak Detailing: Cinema Ambient Backlight Projection */}
+              <div className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-[#F01428]/20 via-[#990000]/15 to-[#8A2BE2]/15 rounded-3xl blur-2xl opacity-60 pointer-events-none -z-10 animate-demon-aura" />
+
+              <VidWavePlayer
+                embedUrl={embedUrl}
+                title={`${anime.title.english || anime.title.romaji} - Episode ${currentEpNum}`}
+                episodeNumber={currentEpNum}
+                posterUrl={currentEpisode?.thumbnail || anime.bannerImage || anime.coverImage?.large}
+                isPlaying={isPlaying}
+                onPlay={() => setIsPlaying(true)}
+                onTimeUpdate={handleTimeUpdate}
+                onComplete={handleNextEp}
+                onAutoNext={handleNextEp}
+                onError={handlePlayerError}
+                isLoading={isStreamLoading}
+                streamError={streamError}
+                onRetry={() => fetchStreamData()}
+                audio={audioTrack}
+                providerName="DevilMotion Stream Node"
+                streamingState={streamingState}
+                onSwitchServer={() => handlePlayerError()}
+              />
+            </div>
 
             {/* Explicit Notice when Hindi Dub is requested but unavailable for this episode */}
             {audioTrack === 'hindi' && (languageStatus.hindi === 'unavailable' || (streamData && streamData?.stream?.available === false)) && (
@@ -627,18 +637,20 @@ export const WatchPage: React.FC = () => {
                   </button>
                 ))}
 
-                {/* Monetag Direct Link Ad - VIP Ultra Stream */}
-                <a
-                  href="https://uplcm.com/4/12340281"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs px-3 py-1.5 rounded-lg border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-[#F01428]/20 hover:from-amber-500/20 hover:to-[#F01428]/30 text-amber-300 font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm shadow-amber-500/10"
-                  title="Direct VIP High-Speed Mirror (Sponsored)"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                  <span>⚡ Ultra Mirror (VIP)</span>
-                  <ExternalLink className="w-3 h-3 text-amber-400" />
-                </a>
+                {/* Monetag Direct Link Ad - VIP Ultra Stream (Configurable via adsConfig.ts) */}
+                {ADS_ENABLED && (
+                  <a
+                    href={AD_CONFIG.directLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs px-3 py-1.5 rounded-lg border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-[#F01428]/20 hover:from-amber-500/20 hover:to-[#F01428]/30 text-amber-300 font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm shadow-amber-500/10"
+                    title="Direct VIP High-Speed Mirror (Sponsored)"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                    <span>⚡ Ultra Mirror (VIP)</span>
+                    <ExternalLink className="w-3 h-3 text-amber-400" />
+                  </a>
+                )}
 
                 {/* Audio Track Tag indicator */}
                 <div className="ml-auto hidden md:flex items-center gap-1.5 text-xs text-[#9E9EB2]">

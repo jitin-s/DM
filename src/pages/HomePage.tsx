@@ -10,6 +10,7 @@ import { LatestEpisodesSection } from '../components/sections/LatestEpisodesSect
 import { PopularRankedSection } from '../components/sections/PopularRankedSection';
 import { BrowseGenresSection } from '../components/sections/BrowseGenresSection';
 import { AnimeGridSection } from '../components/sections/AnimeGridSection';
+import { AnimeQuoteTicker } from '../components/common/AnimeQuoteTicker';
 
 export const HomePage: React.FC = () => {
   const { historyItems } = useWatchlist();
@@ -81,6 +82,9 @@ export const HomePage: React.FC = () => {
     <div className="space-y-6">
       {/* 1. Featured Anime Hero Banner (DevilMotion Live Spotlight) */}
       <HeroCarousel items={trending.slice(0, 5)} />
+
+      {/* 1.2 Legendary Anime Decrees & Quotes Ticker */}
+      <AnimeQuoteTicker />
 
       {/* 1.5 Continue Watching (Recorded History) */}
       {historyItems.length > 0 && (

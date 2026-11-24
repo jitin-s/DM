@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, Bookmark, Menu, X, ChevronDown, Flame, TrendingUp, Star, PlayCircle, Film, Tv, Calendar, Tag, ExternalLink } from 'lucide-react';
 import { useWatchlist } from '../../context/WatchlistContext';
+import { ADS_ENABLED, AD_CONFIG } from '../../config/adsConfig';
 
 interface NavbarProps {
   onOpenSearch: () => void;
@@ -151,18 +152,20 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Direct Link Ad - VIP Access */}
-            <a
-              href="https://uplcm.com/4/12340281"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-[#F01428]/20 to-amber-500/15 text-amber-300 hover:text-white hover:border-amber-400 transition-all shadow-sm shadow-amber-500/15 active:scale-95"
-              title="Access VIP Stream Node"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-              <span>VIP Server</span>
-              <ExternalLink className="w-3 h-3 text-amber-400" />
-            </a>
+            {/* Direct Link Ad - VIP Access (Configurable via adsConfig.ts) */}
+            {ADS_ENABLED && (
+              <a
+                href={AD_CONFIG.directLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-amber-500/30 bg-gradient-to-r from-amber-500/15 via-[#F01428]/20 to-amber-500/15 text-amber-300 hover:text-white hover:border-amber-400 transition-all shadow-sm shadow-amber-500/15 active:scale-95"
+                title="Access VIP Stream Node"
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
+                <span>VIP Server</span>
+                <ExternalLink className="w-3 h-3 text-amber-400" />
+              </a>
+            )}
 
             {/* Search Trigger Button */}
             <button
@@ -256,17 +259,19 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
                   <Search className="w-4 h-4 text-[#F01428]" /> Search Catalog
                 </Link>
 
-                <a
-                  href="https://uplcm.com/4/12340281"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-amber-300 bg-gradient-to-r from-amber-500/15 via-[#F01428]/15 to-amber-500/15 border border-amber-500/30"
-                >
-                  <span className="flex items-center gap-2.5">
-                    <Flame className="w-4 h-4 text-amber-400" /> VIP Realm Server
-                  </span>
-                  <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
-                </a>
+                {ADS_ENABLED && (
+                  <a
+                    href={AD_CONFIG.directLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-bold text-amber-300 bg-gradient-to-r from-amber-500/15 via-[#F01428]/15 to-amber-500/15 border border-amber-500/30"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <Flame className="w-4 h-4 text-amber-400" /> VIP Realm Server
+                    </span>
+                    <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+                  </a>
+                )}
               </div>
             </div>
           </div>

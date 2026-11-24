@@ -22,10 +22,13 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
       to={`/watch/${animeId}?ep=${episode.number}`}
       className={`group relative flex flex-col rounded-xl overflow-hidden bg-[#15151C] border transition-all duration-300 ${
         isActive
-          ? 'border-[#F01428] shadow-lg shadow-[#F01428]/20 bg-[#1C1C26]'
-          : 'border-white/[0.08] hover:border-white/20 hover:bg-[#1A1A22]'
+          ? 'border-[#F01428] shadow-lg shadow-[#F01428]/30 bg-[#1C1C26] ring-1 ring-[#F01428]/50'
+          : 'border-white/[0.08] hover:border-white/20 hover:bg-[#1A1A22] hover:-translate-y-0.5'
       }`}
     >
+      {/* Anime Sheen on hover */}
+      <div className="card-sheen-sweep" />
+
       {/* Thumbnail */}
       <div className="relative aspect-video w-full overflow-hidden bg-black/40">
         <img
@@ -95,7 +98,18 @@ export const EpisodeCard: React.FC<EpisodeCardProps> = ({
           </p>
         )}
 
-        <p className="text-xs text-[#9E9EB2] truncate">{animeTitle}</p>
+        {isActive ? (
+          <div className="flex items-center gap-1.5 text-xs text-[#FF4D61] font-bold">
+            <span className="flex items-end gap-0.5 h-2.5">
+              <span className="w-0.5 bg-[#FF4D61] rounded-full animate-soundwave-1" />
+              <span className="w-0.5 bg-[#FF4D61] rounded-full animate-soundwave-2" />
+              <span className="w-0.5 bg-[#FF4D61] rounded-full animate-soundwave-3" />
+            </span>
+            <span>Now Streaming</span>
+          </div>
+        ) : (
+          <p className="text-xs text-[#9E9EB2] truncate">{animeTitle}</p>
+        )}
 
         <div className="flex items-center justify-between text-[11px] text-[#646478] mt-auto pt-1">
           <span className="text-[11px] text-[#9E9EB2]/80">

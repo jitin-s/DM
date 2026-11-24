@@ -268,11 +268,15 @@ export const VidWavePlayer: React.FC<VidWavePlayerProps> = ({
 
           {/* Audio Status Badge top-right */}
           <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold border backdrop-blur-md ${currentAudioInfo.color}`}>
-              <Volume2 className="w-3.5 h-3.5" />
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-bold border backdrop-blur-md shadow-md ${currentAudioInfo.color}`}>
+              <span className="flex items-end gap-0.5 h-3">
+                <span className="w-0.5 bg-current rounded-full animate-soundwave-1" />
+                <span className="w-0.5 bg-current rounded-full animate-soundwave-2" />
+                <span className="w-0.5 bg-current rounded-full animate-soundwave-3" />
+              </span>
               <span>{currentAudioInfo.badge}</span>
             </div>
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-[11px] text-white border border-white/10">
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-black/70 backdrop-blur-md text-[11px] text-white border border-white/10 shadow-md">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-[#9E9EB2]">Node:</span>
               <span className="font-semibold text-white">DevilMotion Verified</span>

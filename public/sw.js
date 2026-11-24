@@ -1,6 +1,4 @@
-self.options = {
-    "domain": "3nbf4.com",
-    "zoneId": 12340075
-}
-self.lary = ""
-importScripts('https://3nbf4.com/act/files/service-worker.min.js?r=sw')
+// DevilMotion Service Worker - Ads Temporarily Paused
+// Original Monetag service worker backed up in backups/ads_monetag/sw.js
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', () => self.clients.claim());

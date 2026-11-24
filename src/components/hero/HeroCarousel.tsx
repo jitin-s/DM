@@ -6,6 +6,7 @@ import { useWatchlist } from '../../context/WatchlistContext';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { HeroSkeleton } from '../ui/Skeleton';
+import { AnimeEmberParticles } from '../common/AnimeEmberParticles';
 
 interface HeroCarouselProps {
   items: AnimeItem[];
@@ -68,6 +69,9 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ items }) => {
         <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-[#08080A]/90 to-transparent z-10" />
         {/* Subtle devil red atmospheric accent */}
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#F01428]/15 rounded-full blur-3xl pointer-events-none z-10" />
+
+        {/* Floating Demonic Embers Detailing */}
+        <AnimeEmberParticles count={24} className="opacity-75 z-15" />
       </div>
 
       {/* Hero Content */}

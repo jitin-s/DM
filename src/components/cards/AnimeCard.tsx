@@ -45,8 +45,11 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
       {/* Poster Image Container */}
       <Link
         to={`/anime/${anime.id}`}
-        className="relative block aspect-[2/3] w-full overflow-hidden rounded-xl bg-[#15151C] border border-white/[0.08] group-hover:border-[#F01428]/50 shadow-lg shadow-black/40 transition-all duration-300 group-hover:shadow-2xl group-hover:shadow-[#F01428]/20"
+        className="relative block aspect-[2/3] w-full overflow-hidden rounded-xl bg-[#15151C] border border-white/[0.08] group-hover:border-[#F01428] shadow-lg shadow-black/40 transition-all duration-300 group-hover:shadow-[0_8px_25px_rgba(240,20,40,0.35)] group-hover:-translate-y-1"
       >
+        {/* Holographic Anime Sheen on hover */}
+        <div className="card-sheen-sweep" />
+
         {/* Cover Image */}
         <img
           src={coverSrc}
@@ -68,17 +71,19 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
           </Badge>
           <div className="flex items-center gap-1">
             {anime.subAvailable && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur-md text-[#9E9EB2] border border-white/10">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-md text-[#B0B0C5] border border-white/10">
                 SUB
               </span>
             )}
             {anime.dubAvailable && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#F01428]/80 backdrop-blur-md text-white border border-[#F01428]/40">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#F01428]/85 backdrop-blur-md text-white border border-[#F01428]/50 shadow-sm shadow-[#F01428]/40">
+                <span className="w-1 h-1 rounded-full bg-white animate-ping" />
                 DUB
               </span>
             )}
             {anime.isHindiDubbed && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/80 backdrop-blur-md text-black border border-amber-400/50">
+              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/90 backdrop-blur-md text-black border border-amber-400/60 shadow-sm shadow-amber-500/40">
+                <span className="w-1 h-1 rounded-full bg-black animate-pulse" />
                 HINDI
               </span>
             )}
@@ -102,12 +107,12 @@ export const AnimeCard: React.FC<AnimeCardProps> = ({
 
         {/* Hover Action Overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-3 z-20">
-          {/* Quick Play Button */}
+          {/* Quick Play Button with Arcane Flare */}
           <div className="flex items-center justify-center mb-auto mt-auto">
             <button
               onClick={handlePlayClick}
               aria-label="Play Now"
-              className="w-12 h-12 rounded-full bg-[#F01428] hover:bg-[#ff2035] text-white flex items-center justify-center shadow-lg shadow-[#F01428]/50 transform scale-75 group-hover:scale-100 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
+              className="w-12 h-12 rounded-full bg-[#F01428] hover:bg-[#ff2035] text-white flex items-center justify-center shadow-xl shadow-[#F01428]/60 ring-4 ring-[#F01428]/30 group-hover:ring-[#F01428]/60 transform scale-75 group-hover:scale-100 transition-all duration-300 hover:scale-110 active:scale-95 cursor-pointer"
             >
               <Play className="w-5 h-5 fill-white translate-x-0.5" />
             </button>
