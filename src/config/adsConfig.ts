@@ -1,6 +1,6 @@
 // DevilMotion Ad Engine Configuration
 // Set ADS_ENABLED to true to resume all ad placements instantly.
-export const ADS_ENABLED = false;
+export const ADS_ENABLED = true;
 
 export const AD_CONFIG = {
   directLink: "https://uplcm.com/4/12340281",
