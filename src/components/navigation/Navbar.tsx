@@ -89,7 +89,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
                 <img
                   src="/logo_cropped.png"
                   alt="DEVILMOTION"
-                  className="h-full w-auto max-w-[190px] sm:max-w-[220px] object-contain drop-shadow-[0_0_15px_rgba(240,20,40,0.35)] group-hover:drop-shadow-[0_0_22px_rgba(240,20,40,0.6)] transition-all duration-300"
+                  className="h-full w-auto max-w-[130px] sm:max-w-[200px] object-contain drop-shadow-[0_0_15px_rgba(240,20,40,0.35)] group-hover:drop-shadow-[0_0_22px_rgba(240,20,40,0.6)] transition-all duration-300"
                 />
               </div>
             </Link>
@@ -152,8 +152,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Adsterra VIP Smartlink (Desktop & Tablet) */}
-            <AdsterraSmartlinkButton variant="nav" label="VIP 4K" className="hidden sm:inline-flex whitespace-nowrap" />
+            {/* Adsterra VIP Smartlink (Desktop & Tablet only in header) */}
+            <div className="hidden sm:flex shrink-0">
+              <AdsterraSmartlinkButton variant="nav" label="VIP 4K" />
+            </div>
 
             {/* Search Trigger Button */}
             <button

@@ -1,44 +1,60 @@
-# Adsterra Ads Integration for DevilMotion
+# Adsterra Anti-Adblock Ads Integration for DevilMotion
 
-This folder contains all isolated and modular components for **Adsterra** advertising on DevilMotion (`https://devilmotion.live`).
+This folder contains all isolated and modular components for **Adsterra Anti-Adblock** advertising on DevilMotion (`https://devilmotion.live`).
 
-> **Status**: 100% Adsterra Only. Monetag ads have been completely removed.
+> **Status**: 100% Adsterra Anti-Adblock (AAB). Monetag ads have been completely removed.
 > **Smartlink**: `https://araplhn.org/4/7ea7959f2e2fd21bb3a079343ba7a03f`
-> **Popunder**: `<script data-cfasync="false" src="https://abscloud.org/1/1acd22d50f5c79ed2f392436bc705baf"></script>`
 
 ---
 
-## High-Converting Placements (Top & Middle)
+## Anti-Adblock Ad Formats & Scripts
 
-### 1. Popunder (On-Click High CPM)
-- Script embedded in `index.html` within `<body>`.
-- Listens for user interactions to trigger clean high-CPM sponsor tabs.
+### 1. Banner 300x250 Anti-Adblock (Medium Rectangle)
+```html
+<script>
+  atOptions = {
+    'key' : '68b1b298ad50cf3bdfa7afb13018d1df',
+    'format' : 'iframe',
+    'height' : 250,
+    'width' : 300,
+    'params' : {}
+  };
+</script>
+<script data-cfasync="false" src="https://bauval.org/22/68b1b298ad50cf3bdfa7afb13018d1df"></script>
+```
+- **Placements (Top & Middle)**:
+  - **Watch Page (Top)**: Right Sidebar directly above Episode List (immediately visible alongside player above the fold).
+  - **Watch Page (Middle)**: Right sidebar directly below Episode List.
+  - **Anime Details Page**: Left poster sidebar directly below actions.
+  - **Home Page**: Middle section between Trending and Recently Updated.
 
-### 2. Smartlink (Direct Link Triggers)
-- **Navbar (Desktop & Mobile)**: `⚡ VIP 4K` pill button in desktop header (`hidden sm:inline-flex` for zero mobile header squeezing) and full-width in mobile menu drawer.
-- **Watch Page Streaming Server Switcher**: `⚡ VIP 4K Server` button in the server selector.
-- **Watch Page Player Toolbar**: `⚡ Download 4K` button.
-- **Watch Page Middle**: `⚡ Stream in Ultra HD 4K without Buffer — Connect to VIP Node` interactive banner.
-- **Anime Details Page**: `⚡ Watch in 4K HDR Ultra (VIP Node)` action button right under "Summon & Watch Ep 1".
-- **Genres Page**: Top/Middle 4K VIP Banner.
-- **Schedule Page**: Top/Middle Simulcast 4K VIP Banner.
-- **Search Page**: Top/Middle 4K VIP Banner.
+### 2. Social Bar Anti-Adblock
+```html
+<script data-cfasync="false" src="https://bauval.org/14/08f428f8ca2952fb932467bef2db4a47"></script>
+```
+- Global in `index.html` within `<body>`.
 
-### 3. Native Banners (Top & Middle of Feeds)
-- **Home Page**: Middle section between Top 10 Ranked and Browse by Genre.
-- **Watch Page**: Middle section between Player and Franchise Relations.
-- **Anime Details Page**: Top/Middle section between Synopsis/Stats and Episodes tabs.
-- **Anime Catalog Page**: Top/Middle section between Filters and Content Grid.
-- **Movies Page**: Top/Middle section between Genre Filters and Feature Film Grid.
-- **Genres Page**: Top/Middle section between Genre Badges and Anime Grid.
-- **Schedule Page**: Top/Middle section between Broadcast Day Tabs and Anime Grid.
-- **Search Page**: Top/Middle section between Search Tags and Results Grid.
+### 3. Native Banner Anti-Adblock
+```html
+<script async fetchpriority="high" data-cfasync="false" src="https://bauval.org/21/16be909fc62f62037ec1196397278a57"></script>
+<div id="container-16be909fc62f62037ec1196397278a57"></div>
+```
+- **Placements (Top & Middle)**:
+  - **Home Page**: Middle section between Top 10 Ranked and Browse by Genre.
+  - **Watch Page**: Middle section between Player and Franchise Relations.
+  - **Anime Details Page**: Top/Middle section between Synopsis/Stats and Episodes tabs.
+  - **Anime Catalog Page**: Top/Middle section between Filters and Content Grid.
+  - **Movies Page**: Top/Middle section between Genre Filters and Feature Film Grid.
+  - **Genres Page**: Top/Middle section between Genre Badges and Anime Grid.
+  - **Schedule Page**: Top/Middle section between Broadcast Day Tabs and Anime Grid.
+  - **Search Page**: Top/Middle section between Search Tags and Results Grid.
 
-### 4. Medium Rectangle (300x250 Banners)
-- **Watch Page (Top)**: Top of the right sidebar directly above Episode List (immediately visible alongside player above the fold).
-- **Watch Page (Middle)**: Right sidebar directly below Episode List.
-- **Anime Details Page**: Left poster sidebar directly below actions.
-- **Home Page**: Middle section between Trending and Recently Updated.
+### 4. Popunder Anti-Adblock (On-Click High CPM)
+```html
+<script data-cfasync="false" src="https://abscloud.org/1/1acd22d50f5c79ed2f392436bc705baf"></script>
+```
+- Global in `index.html` within `<body>`.
 
-### 5. Social Bar
-- Global non-intrusive floating bar loaded in `index.html`.
+### 5. Smartlink Direct Triggers
+- URL: `https://araplhn.org/4/7ea7959f2e2fd21bb3a079343ba7a03f`
+- Integrated as 4K VIP streamer buttons, download buttons, and banners across all pages.

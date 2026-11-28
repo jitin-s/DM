@@ -21,7 +21,7 @@ export const AdsterraSmartlinkButton: React.FC<AdsterraSmartlinkButtonProps> = (
         href={ADSTERRA_SMARTLINK}
         target="_blank"
         rel="noopener noreferrer"
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-amber-500/40 bg-gradient-to-r from-amber-500/20 via-[#F01428]/25 to-amber-500/20 text-amber-300 hover:text-white hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all duration-200 active:scale-95 group ${className}`}
+        className={`items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold rounded-lg border border-amber-500/40 bg-gradient-to-r from-amber-500/20 via-[#F01428]/25 to-amber-500/20 text-amber-300 hover:text-white hover:border-amber-400 hover:shadow-[0_0_15px_rgba(245,158,11,0.4)] transition-all duration-200 active:scale-95 group ${className || 'inline-flex'}`}
         title="Access DevilMotion VIP Ultra Stream (Sponsored)"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
