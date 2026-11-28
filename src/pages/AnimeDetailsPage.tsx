@@ -27,6 +27,7 @@ import { AnimeEmberParticles } from '../components/common/AnimeEmberParticles';
 import { DemonPageLoader } from '../components/common/DemonPageLoader';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
+import { AdsterraNativeBanner } from '../components/ads/adsterra';
 
 export const AnimeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -670,6 +671,9 @@ export const AnimeDetailsPage: React.FC = () => {
               ))}
             </div>
           )}
+
+          {/* Adsterra Native Sponsored Recommendations */}
+          <AdsterraNativeBanner title="Sponsored Realm Picks" />
         </div>
       </div>
     </div>

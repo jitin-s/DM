@@ -11,6 +11,7 @@ import { PopularRankedSection } from '../components/sections/PopularRankedSectio
 import { BrowseGenresSection } from '../components/sections/BrowseGenresSection';
 import { AnimeGridSection } from '../components/sections/AnimeGridSection';
 import { AnimeQuoteTicker } from '../components/common/AnimeQuoteTicker';
+import { AdsterraNativeBanner } from '../components/ads/adsterra';
 
 export const HomePage: React.FC = () => {
   const { historyItems } = useWatchlist();
@@ -110,6 +111,9 @@ export const HomePage: React.FC = () => {
 
       {/* 5. Popular Anime (Top 10 Ranked) */}
       <PopularRankedSection items={popular} />
+
+      {/* Adsterra Native Sponsored Recommendations (Clean in-stream placement, max 1 on page) */}
+      <AdsterraNativeBanner title="Sponsored Realm Recommendations" />
 
       {/* 6. Browse by Genre */}
       <BrowseGenresSection />

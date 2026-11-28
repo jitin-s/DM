@@ -24,6 +24,7 @@ import { VidWavePlayer } from '../components/player/VidWavePlayer';
 import { DemonPageLoader } from '../components/common/DemonPageLoader';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
+import { AdsterraBanner300x250 } from '../components/ads/adsterra';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
 const formatServerLabel = (server: { id: string; name: string; whiteLabelName?: string }, index?: number): string => {
@@ -822,6 +823,11 @@ export const WatchPage: React.FC = () => {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Adsterra 300x250 Medium Rectangle - High Visibility, Safe Sidebar Placement */}
+            <div className="flex justify-center pt-2">
+              <AdsterraBanner300x250 />
             </div>
           </div>
         </div>
