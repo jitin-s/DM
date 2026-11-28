@@ -428,6 +428,9 @@ export const AnimeCatalogPage: React.FC = () => {
           </div>
         )}
 
+        {/* Adsterra Native Sponsored Recommendations (Moved to Top/Middle of Catalog) */}
+        <AdsterraNativeBanner title="Sponsored Catalog Discoveries" />
+
         {/* Content Grid */}
         {isLoading && items.length === 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 sm:gap-5">
@@ -450,9 +453,6 @@ export const AnimeCatalogPage: React.FC = () => {
             ))}
           </div>
         )}
-
-        {/* Adsterra Native Sponsored Recommendations */}
-        <AdsterraNativeBanner title="Sponsored Catalog Discoveries" />
 
         {/* Load More Button & Pagination Status */}
         {hasNextPage ? (

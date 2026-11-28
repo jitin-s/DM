@@ -23,7 +23,7 @@ import { VidWavePlayer } from '../components/player/VidWavePlayer';
 import { DemonPageLoader } from '../components/common/DemonPageLoader';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { ADS_ENABLED } from '../config/adsConfig';
-import { AdsterraBanner300x250, AdsterraNativeBanner } from '../components/ads/adsterra';
+import { AdsterraBanner300x250, AdsterraNativeBanner, AdsterraSmartlinkButton } from '../components/ads/adsterra';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
 const formatServerLabel = (server: { id: string; name: string; whiteLabelName?: string }, index?: number): string => {
@@ -608,6 +608,13 @@ export const WatchPage: React.FC = () => {
                   >
                     {inWatchlist ? <BookmarkCheck className="w-4 h-4 fill-white" /> : <Bookmark className="w-4 h-4" />}
                   </button>
+
+                  {/* Adsterra Smartlink 4K Download Trigger */}
+                  <AdsterraSmartlinkButton
+                    variant="download"
+                    label="⚡ Download 4K"
+                    className="hidden sm:inline-flex"
+                  />
                 </div>
               </div>
 
@@ -616,6 +623,12 @@ export const WatchPage: React.FC = () => {
                 <span className="text-xs text-[#9E9EB2] font-semibold flex items-center gap-1.5 mr-1">
                   <Server className="w-3.5 h-3.5 text-[#F01428]" /> Stream:
                 </span>
+
+                {/* Adsterra Smartlink VIP 4K Server Mirror */}
+                <AdsterraSmartlinkButton
+                  variant="server"
+                  label="⚡ VIP 4K Server"
+                />
                 {(streamData?.servers?.length ? streamData.servers : (
                   audioTrack === 'hindi'
                     ? [
@@ -653,6 +666,11 @@ export const WatchPage: React.FC = () => {
 
           {/* Right Sidebar: Episode Selector & Playlist */}
           <div className="space-y-4">
+            {/* Top of Sidebar Adsterra 300x250 Banner - Immediately Visible Above The Fold */}
+            <div className="flex justify-center">
+              <AdsterraBanner300x250 />
+            </div>
+
             <div className="bg-[#121218] border border-white/[0.08] rounded-2xl p-4 shadow-xl flex flex-col h-[600px]">
               {/* Header */}
               <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
@@ -808,12 +826,16 @@ export const WatchPage: React.FC = () => {
                 })}
               </div>
             </div>
-
-            {/* Adsterra 300x250 Medium Rectangle - High Visibility, Safe Sidebar Placement */}
-            <div className="flex justify-center pt-2">
-              <AdsterraBanner300x250 />
-            </div>
           </div>
+        </div>
+
+        {/* Adsterra Middle Placement - High-Traffic Conversion Zone */}
+        <div className="mt-10 mb-4 space-y-4">
+          <AdsterraSmartlinkButton
+            variant="banner"
+            label="⚡ Stream in Ultra HD 4K without Buffer — Connect to VIP Node"
+          />
+          <AdsterraNativeBanner title="Sponsored Realm Recommendations" />
         </div>
 
         {/* Seasons & Franchise Relations */}
@@ -902,11 +924,6 @@ export const WatchPage: React.FC = () => {
             </div>
           </div>
         )}
-
-        {/* Adsterra Native Sponsored Recommendations */}
-        <div className="mt-10">
-          <AdsterraNativeBanner title="Sponsored Realm Recommendations" />
-        </div>
       </div>
     </div>
   );

@@ -2,25 +2,31 @@
 
 This folder contains all isolated and modular components for **Adsterra** advertising on DevilMotion (`https://devilmotion.live`).
 
-> **Note**: Monetag ads have been fully disabled and removed across the platform in favor of pure, high-quality Adsterra ads.
-
-## Placement Guidelines & Quality Safeguards
-1. **Adsterra Only**: Zero Monetag tags, popunders, or links.
-2. **Ad Count Limit**: Strictly 2–3 genuine ads per page to prevent overcrowding and maintain a premium streaming experience.
-3. **Non-Intrusive & High-CTR**:
-   - Ads never block video playback, player controls, audio switchers, or search.
-   - Header navigation, search autocomplete, and footers remain 100% accessible and unobstructed.
-4. **React SPA Isolation**:
-   - Adsterra's 300x250 medium rectangle executes `document.write()`. It is isolated inside a sandboxed `srcDoc` iframe in `<AdsterraBanner300x250 />` to prevent wiping the Single Page App DOM.
+> **Status**: 100% Adsterra Only. Monetag ads have been completely removed.
+> **Smartlink**: `https://araplhn.org/4/7ea7959f2e2fd21bb3a079343ba7a03f`
 
 ---
 
-## Ad Placements Across Pages
+## High-Converting Placements (Top & Middle)
 
-| Page | Placements | Ad Count |
-| :--- | :--- | :--- |
-| **Home Page** (`HomePage.tsx`) | • Native Banner (between *Top 10 Ranked* and *Browse Genres*)<br>• 300x250 Showcase (between *Movies* and *Upcoming*)<br>• Social Bar | 3 ads |
-| **Watch Page** (`WatchPage.tsx`) | • 300x250 Banner (right sidebar below Episode Playlist)<br>• Native Banner (bottom below Recommendations)<br>• Social Bar | 3 ads |
-| **Anime Details** (`AnimeDetailsPage.tsx`) | • 300x250 Banner (poster column sidebar below actions)<br>• Native Banner (bottom below tabs)<br>• Social Bar | 3 ads |
-| **Catalog Page** (`AnimeCatalogPage.tsx`) | • Native Banner (above pagination/load more)<br>• Social Bar | 2 ads |
-| **Movies Page** (`MoviesPage.tsx`) | • Native Banner (above pagination/load more)<br>• Social Bar | 2 ads |
+### 1. Smartlink (Direct Link Triggers)
+- **Navbar (Desktop & Mobile)**: `⚡ VIP 4K` pill button right next to the search bar and mobile drawer.
+- **Watch Page Streaming Server Switcher**: `⚡ VIP 4K Server` button in the server selector.
+- **Watch Page Player Toolbar**: `⚡ Download 4K` button.
+- **Watch Page Middle**: `⚡ Stream in Ultra HD 4K without Buffer — Connect to VIP Node` interactive banner.
+- **Anime Details Page**: `⚡ Watch in 4K HDR Ultra (VIP Node)` action button right under "Summon & Watch Ep 1".
+
+### 2. Native Banners (Top & Middle of Feeds)
+- **Home Page**: Middle section between Top 10 Ranked and Browse by Genre.
+- **Watch Page**: Middle section between Player and Franchise Relations.
+- **Anime Details Page**: Top/Middle section between Synopsis/Stats and Episodes tabs.
+- **Anime Catalog Page**: Top/Middle section between Filters and Content Grid.
+- **Movies Page**: Top/Middle section between Genre Filters and Feature Film Grid.
+
+### 3. Medium Rectangle (300x250 Banners)
+- **Watch Page**: Top of the right sidebar directly above Episode List (immediately visible alongside player above the fold).
+- **Anime Details Page**: Left poster sidebar directly below actions.
+- **Home Page**: Middle section between Trending and Recently Updated.
+
+### 4. Social Bar
+- Global non-intrusive floating bar loaded in `index.html`.

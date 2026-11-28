@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Search, Bookmark, Menu, X, ChevronDown, Flame, TrendingUp, Star, PlayCircle, Film, Tv, Calendar, Tag } from 'lucide-react';
 import { useWatchlist } from '../../context/WatchlistContext';
+import { AdsterraSmartlinkButton } from '../ads/adsterra';
 
 interface NavbarProps {
   onOpenSearch: () => void;
@@ -151,6 +152,9 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Adsterra VIP Smartlink */}
+            <AdsterraSmartlinkButton variant="nav" label="VIP 4K" />
+
             {/* Search Trigger Button */}
             <button
               onClick={onOpenSearch}
@@ -242,6 +246,13 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
                 >
                   <Search className="w-4 h-4 text-[#F01428]" /> Search Catalog
                 </Link>
+
+                {/* Adsterra VIP Smartlink in Mobile Drawer */}
+                <AdsterraSmartlinkButton
+                  variant="nav"
+                  label="⚡ VIP 4K Stream (No Buffer)"
+                  className="w-full justify-between px-3.5 py-2.5 text-xs sm:text-sm mt-1"
+                />
               </div>
             </div>
           </div>

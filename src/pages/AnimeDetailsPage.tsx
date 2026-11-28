@@ -25,7 +25,7 @@ import { AnimeEmberParticles } from '../components/common/AnimeEmberParticles';
 import { DemonPageLoader } from '../components/common/DemonPageLoader';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
 import { ADS_ENABLED } from '../config/adsConfig';
-import { AdsterraBanner300x250, AdsterraNativeBanner } from '../components/ads/adsterra';
+import { AdsterraBanner300x250, AdsterraNativeBanner, AdsterraSmartlinkButton } from '../components/ads/adsterra';
 
 export const AnimeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -195,6 +195,13 @@ export const AnimeDetailsPage: React.FC = () => {
               >
                 Summon & Watch Ep 1
               </Button>
+
+              {/* Adsterra Smartlink 4K VIP Trigger */}
+              <AdsterraSmartlinkButton
+                variant="details"
+                label="⚡ Watch in 4K HDR Ultra (VIP Node)"
+              />
+
               <Button
                 variant={inWatchlist ? 'primary' : 'secondary'}
                 fullWidth
@@ -323,6 +330,11 @@ export const AnimeDetailsPage: React.FC = () => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Adsterra Native Sponsored Recommendations (Top/Middle Placement) */}
+        <div className="mt-8">
+          <AdsterraNativeBanner title="Sponsored Realm Recommendations" />
         </div>
 
         {/* 3. Tabbed Navigation Section */}
@@ -659,9 +671,6 @@ export const AnimeDetailsPage: React.FC = () => {
               ))}
             </div>
           )}
-
-          {/* Adsterra Native Sponsored Recommendations */}
-          <AdsterraNativeBanner title="Sponsored Realm Picks" />
         </div>
       </div>
     </div>
