@@ -8,6 +8,7 @@ import { AnimeCard } from '../components/cards/AnimeCard';
 import { CardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
+import { AdsterraNativeBanner } from '../components/ads/adsterra';
 
 const FORMATS = ['ALL', 'TV', 'MOVIE', 'ONA', 'OVA'];
 const STATUSES = ['ALL', 'RELEASING', 'FINISHED', 'NOT_YET_RELEASED'];
@@ -449,6 +450,9 @@ export const AnimeCatalogPage: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* Adsterra Native Sponsored Recommendations */}
+        <AdsterraNativeBanner title="Sponsored Catalog Discoveries" />
 
         {/* Load More Button & Pagination Status */}
         {hasNextPage ? (

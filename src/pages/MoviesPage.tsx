@@ -7,6 +7,7 @@ import { CardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
 import { GENRES_LIST } from '../constants/animeConstants';
+import { AdsterraNativeBanner } from '../components/ads/adsterra';
 
 export const MoviesPage: React.FC = () => {
   const [selectedSort, setSelectedSort] = useState<'rating' | 'popular' | 'newest'>('popular');
@@ -172,6 +173,9 @@ export const MoviesPage: React.FC = () => {
             ))}
           </div>
         )}
+
+        {/* Adsterra Native Sponsored Recommendations */}
+        <AdsterraNativeBanner title="Sponsored Feature Film Picks" />
 
         {/* Load More Button */}
         {hasNextPage ? (

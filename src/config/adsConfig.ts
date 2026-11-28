@@ -1,19 +1,17 @@
 // DevilMotion Ad Engine Configuration
-// Set ADS_ENABLED to true to resume all ad placements instantly.
+// Set ADS_ENABLED to true to enable advertising.
 export const ADS_ENABLED = true;
 
 export const AD_CONFIG = {
-  // Monetag
-  directLink: "https://uplcm.com/4/12340281",
+  // Monetag (DISABLED by user request)
   monetag: {
-    vignetteZone: "12340123",
-    popunderZone: "12340119",
-    pushZone: "12340075",
-    vignetteScript: "https://n6wxm.com/vignette.min.js",
-    popunderScript: "https://nap5k.com/tag.min.js",
-    pushScript: "https://5gvci.com/act/files/tag.min.js?z=12340075",
+    enabled: false,
+    directLink: "",
+    vignetteZone: "",
+    popunderZone: "",
+    pushZone: "",
   },
-  // Adsterra
+  // Adsterra (ACTIVE - high quality, non-intrusive placements)
   adsterra: {
     enabled: true,
     socialBarScript: "https://bauval.org/14/08f428f8ca2952fb932467bef2db4a47",
@@ -29,4 +27,5 @@ export const AD_CONFIG = {
     },
   },
 };
+
 

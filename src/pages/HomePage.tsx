@@ -11,7 +11,7 @@ import { PopularRankedSection } from '../components/sections/PopularRankedSectio
 import { BrowseGenresSection } from '../components/sections/BrowseGenresSection';
 import { AnimeGridSection } from '../components/sections/AnimeGridSection';
 import { AnimeQuoteTicker } from '../components/common/AnimeQuoteTicker';
-import { AdsterraNativeBanner } from '../components/ads/adsterra';
+import { AdsterraNativeBanner, AdsterraBanner300x250 } from '../components/ads/adsterra';
 
 export const HomePage: React.FC = () => {
   const { historyItems } = useWatchlist();
@@ -161,6 +161,11 @@ export const HomePage: React.FC = () => {
         limit={6}
         loading={loading.movies}
       />
+
+      {/* Adsterra Sponsored Portal Banner Showcase */}
+      <div className="py-4 flex flex-col items-center justify-center">
+        <AdsterraBanner300x250 />
+      </div>
 
       {/* 11. Upcoming Anime */}
       <AnimeGridSection

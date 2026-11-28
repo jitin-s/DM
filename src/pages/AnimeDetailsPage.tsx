@@ -13,8 +13,6 @@ import {
   Loader2,
   Users,
   Layers,
-  Flame,
-  ExternalLink,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useWatchlist } from '../context/WatchlistContext';
@@ -26,8 +24,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { AnimeEmberParticles } from '../components/common/AnimeEmberParticles';
 import { DemonPageLoader } from '../components/common/DemonPageLoader';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
-import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
-import { AdsterraNativeBanner } from '../components/ads/adsterra';
+import { ADS_ENABLED } from '../config/adsConfig';
+import { AdsterraBanner300x250, AdsterraNativeBanner } from '../components/ads/adsterra';
 
 export const AnimeDetailsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -212,20 +210,10 @@ export const AnimeDetailsPage: React.FC = () => {
                 {inWatchlist ? 'In Dark Grimoire' : 'Add to Grimoire'}
               </Button>
 
-              {/* Direct Link Ad - High Speed Stream (Configurable via adsConfig.ts) */}
-              {ADS_ENABLED && (
-                <a
-                  href={AD_CONFIG.directLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-2.5 px-3 rounded-xl text-xs font-bold text-amber-300 bg-gradient-to-r from-amber-500/15 via-[#F01428]/20 to-amber-500/15 hover:from-amber-500/25 hover:to-[#F01428]/30 border border-amber-500/30 transition-all flex items-center justify-center gap-2 shadow-sm shadow-amber-500/10 cursor-pointer"
-                  title="Direct Ultra Speed Mirror (Sponsored)"
-                >
-                  <Flame className="w-3.5 h-3.5 text-amber-400" />
-                  <span>⚡ VIP Stream Server (Ad)</span>
-                  <ExternalLink className="w-3 h-3 text-amber-400" />
-                </a>
-              )}
+              {/* Adsterra 300x250 Medium Rectangle - High Visibility Poster Column Placement */}
+              <div className="pt-3 flex justify-center">
+                <AdsterraBanner300x250 />
+              </div>
             </div>
           </div>
 

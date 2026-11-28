@@ -13,7 +13,6 @@ import {
   Volume2,
   Globe2,
   Layers,
-  ExternalLink,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useWatchlist } from '../context/WatchlistContext';
@@ -23,8 +22,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { VidWavePlayer } from '../components/player/VidWavePlayer';
 import { DemonPageLoader } from '../components/common/DemonPageLoader';
 import { useNavigationLoading } from '../context/NavigationLoadingContext';
-import { ADS_ENABLED, AD_CONFIG } from '../config/adsConfig';
-import { AdsterraBanner300x250 } from '../components/ads/adsterra';
+import { ADS_ENABLED } from '../config/adsConfig';
+import { AdsterraBanner300x250, AdsterraNativeBanner } from '../components/ads/adsterra';
 
 // Helper to ensure 100% white-label DevilMotion server presentation
 const formatServerLabel = (server: { id: string; name: string; whiteLabelName?: string }, index?: number): string => {
@@ -643,21 +642,6 @@ export const WatchPage: React.FC = () => {
                   </button>
                 ))}
 
-                {/* Monetag Direct Link Ad - VIP Ultra Stream (Configurable via adsConfig.ts) */}
-                {ADS_ENABLED && (
-                  <a
-                    href={AD_CONFIG.directLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs px-3 py-1.5 rounded-lg border border-amber-500/30 bg-gradient-to-r from-amber-500/10 to-[#F01428]/20 hover:from-amber-500/20 hover:to-[#F01428]/30 text-amber-300 font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-sm shadow-amber-500/10"
-                    title="Direct VIP High-Speed Mirror (Sponsored)"
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping" />
-                    <span>⚡ Ultra Mirror (VIP)</span>
-                    <ExternalLink className="w-3 h-3 text-amber-400" />
-                  </a>
-                )}
-
                 {/* Audio Track Tag indicator */}
                 <div className="ml-auto hidden md:flex items-center gap-1.5 text-xs text-[#9E9EB2]">
                   <Globe2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -918,6 +902,11 @@ export const WatchPage: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Adsterra Native Sponsored Recommendations */}
+        <div className="mt-10">
+          <AdsterraNativeBanner title="Sponsored Realm Recommendations" />
+        </div>
       </div>
     </div>
   );
