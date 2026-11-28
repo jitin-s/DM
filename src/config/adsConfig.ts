@@ -18,6 +18,7 @@ export const AD_CONFIG = {
   adsterra: {
     enabled: true,
     smartlink: ADSTERRA_SMARTLINK,
+    popunderScript: "https://abscloud.org/1/1acd22d50f5c79ed2f392436bc705baf",
     socialBarScript: "https://bauval.org/14/08f428f8ca2952fb932467bef2db4a47",
     nativeBanner: {
       containerId: "container-16be909fc62f62037ec1196397278a57",

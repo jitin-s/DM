@@ -826,6 +826,11 @@ export const WatchPage: React.FC = () => {
                 })}
               </div>
             </div>
+
+            {/* Adsterra 300x250 Medium Rectangle (Bottom of Playlist Sidebar) */}
+            <div className="flex justify-center pt-2">
+              <AdsterraBanner300x250 />
+            </div>
           </div>
         </div>
 

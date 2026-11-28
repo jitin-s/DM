@@ -5,6 +5,7 @@ import { api } from '../services/api';
 import { getScheduleDays } from '../constants/animeConstants';
 import { Badge } from '../components/ui/Badge';
 import { EmptyState } from '../components/ui/EmptyState';
+import { AdsterraNativeBanner, AdsterraSmartlinkButton } from '../components/ads/adsterra';
 
 export const SchedulePage: React.FC = () => {
   const scheduleDays = getScheduleDays();
@@ -195,6 +196,15 @@ export const SchedulePage: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        {/* Adsterra Top/Middle Simulcast Calendar Placement */}
+        <div className="mb-8 space-y-4">
+          <AdsterraSmartlinkButton
+            variant="banner"
+            label="⚡ Stream Live Simulcast Releases in Ultra HD 4K without Buffer"
+          />
+          <AdsterraNativeBanner title="Sponsored Simulcast Releases" />
         </div>
 
         {/* Selected Day Info Banner */}

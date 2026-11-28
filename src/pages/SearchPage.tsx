@@ -6,6 +6,7 @@ import { AnimeItem } from '../types/anime';
 import { AnimeCard } from '../components/cards/AnimeCard';
 import { CardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { AdsterraNativeBanner, AdsterraSmartlinkButton } from '../components/ads/adsterra';
 
 const POPULAR_SEARCH_TAGS = [
   'Solo Leveling',
@@ -123,6 +124,15 @@ export const SearchPage: React.FC = () => {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Adsterra Top Search Placement */}
+        <div className="mb-8 space-y-4">
+          <AdsterraSmartlinkButton
+            variant="banner"
+            label="⚡ Looking for Uncensored 4K Anime Streams? Connect to VIP Node"
+          />
+          <AdsterraNativeBanner title="Sponsored Realm Recommendations" />
         </div>
 
         {/* Results Header */}

@@ -8,6 +8,7 @@ import { AnimeCard } from '../components/cards/AnimeCard';
 import { CardSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Button } from '../components/ui/Button';
+import { AdsterraNativeBanner, AdsterraSmartlinkButton } from '../components/ads/adsterra';
 
 export const GenresPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -168,6 +169,15 @@ export const GenresPage: React.FC = () => {
               </button>
             );
           })}
+        </div>
+
+        {/* Adsterra Top/Middle Placements for Genres Page */}
+        <div className="mb-8 space-y-4">
+          <AdsterraSmartlinkButton
+            variant="banner"
+            label={`⚡ Stream ${selectedGenre} Anime in Ultra HD 4K without Buffer — Connect to VIP Node`}
+          />
+          <AdsterraNativeBanner title={`Sponsored ${selectedGenre} Picks`} />
         </div>
 
         {/* Results Bar for Selected Genre with Sort and Counter */}

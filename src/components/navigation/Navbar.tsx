@@ -152,8 +152,8 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenSearch }) => {
 
           {/* Right: Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Adsterra VIP Smartlink */}
-            <AdsterraSmartlinkButton variant="nav" label="VIP 4K" />
+            {/* Adsterra VIP Smartlink (Desktop & Tablet) */}
+            <AdsterraSmartlinkButton variant="nav" label="VIP 4K" className="hidden sm:inline-flex whitespace-nowrap" />
 
             {/* Search Trigger Button */}
             <button
